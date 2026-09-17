@@ -1,0 +1,14 @@
+# Credenciales (nunca subir)
+IS2_TPFI_credentials.json
+*.credentials.json
+.env
+.env.*
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# AWS
+.aws/
