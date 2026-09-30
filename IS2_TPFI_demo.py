@@ -63,9 +63,10 @@ print("Table %s creation date: %s" % (table.name,table.creation_date_time))
 #*-----------------------------------------------------------------------------$
 response = table.get_item(
     Key={
-        'id': 'UADER-FCyT-IS2'
+        'id': 'UADER-FCYT-IS2'
     }
 )
+print("viene de acceso a la tabla")
 
 item = response['Item']
 print("Response (JSON)")
@@ -83,9 +84,9 @@ for item in response['Item']:
 print(" ")
 
 x = {
-	"sede" : response['Item']['sede'],
-	"domicilio" : response['Item']['domicilio'],
+        "domicilio" : response['Item']['domicilio'],
 	"localidad" : response['Item']['localidad'],
+	"sede" : response['Item']['sede'],
 	"provincia" : response['Item']['provincia']
 }
 print("Python object dump")
@@ -94,12 +95,7 @@ y=json.dumps(x)
 print(y)
 print("------------------")
 
-print("Update test")
-print("------------------")
-#newid=20
-oldnewid=response['Item']['idreq']
-newid=oldnewid+1
-print("Updating item newid (%d)-->(%d)" % (oldnewid,newid))
+"""
 try:
 	response = table.update_item(
                 Key={"id": "UADER-FCyT-IS2"},
@@ -113,6 +109,6 @@ except botocore.exceptions.ClientError as err:
 else:
 		print(response["Attributes"])
 print("Update completed")
-
+"""
 
 
