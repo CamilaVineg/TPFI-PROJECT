@@ -1,0 +1,4 @@
+# Generado por cookiecutter-tpfi
+# Dependencias de ejecucion
+
+boto3>=1.34.0

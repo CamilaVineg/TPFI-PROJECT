@@ -1,0 +1,20 @@
+{
+    "project_name": "TPFI-PROJECT",
+    "package_name": "tpfi",
+    "project_description": "TPFI IS2 - Patron Proxy/Singleton/Observer sobre AWS DynamoDB",
+    "author": "Camila Vinegar",
+    "email": "",
+    "version": "0.1.0",
+    "build_number": "1",
+    "python_version": "3.13",
+    "license": "MIT",
+    "aws_region": "us-west-2",
+    "corporate_table": "CorporateData",
+    "log_table": "CorporateLog",
+    "default_port": "8080",
+    "app_name": "singletonproxyobserver",
+    "client_name": "singletonclient",
+    "observer_name": "observerclient",
+    "use_boto3": true,
+    "__extensions": []
+}

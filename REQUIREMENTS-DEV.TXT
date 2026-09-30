@@ -1,0 +1,12 @@
+# Generado por cookiecutter-tpfi
+# Herramientas de desarrollo, linting, testing y documentacion
+
+ruff>=0.6.0
+black>=24.8.0
+mypy>=1.11.0
+pytest>=8.3.0
+pytest-cov>=5.0.0
+pytest-mock>=3.14.0
+hypothesis>=6.113.0
+bandit>=1.7.9
+pdoc>=14.6.0
