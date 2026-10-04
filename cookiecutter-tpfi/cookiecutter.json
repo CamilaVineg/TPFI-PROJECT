@@ -8,7 +8,7 @@
     "build_number": "1",
     "python_version": "3.13",
     "license": "MIT",
-    "aws_region": "us-west-2",
+    "aws_region": "us-east-1",
     "corporate_table": "CorporateData",
     "log_table": "CorporateLog",
     "default_port": "8080",

@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+from types import SimpleNamespace
+
+import boto3
 import pytest
 
 from tpfi import __build__, __version__, get_build
-from tpfi.config import CORPORATE_FIELDS, DEFAULT_PORT, get_region
+from tpfi.config import AWS_REGION, CORPORATE_FIELDS, DEFAULT_PORT, get_region
 
 
 def test_version_is_defined() -> None:
@@ -37,13 +40,24 @@ def test_corporate_fields_are_listed() -> None:
 
 def test_get_region_uses_environment(monkeypatch: pytest.MonkeyPatch) -> None:
     """La region se toma de ``AWS_DEFAULT_REGION`` si esta definida."""
-    monkeypatch.setenv("AWS_DEFAULT_REGION", "us-east-1")
+    monkeypatch.setenv("AWS_DEFAULT_REGION", "sa-east-1")
 
-    assert get_region() == "us-east-1"
+    assert get_region() == "sa-east-1"
 
 
-def test_get_region_falls_back_to_default(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Sin la variable de entorno se devuelve la region de la plantilla."""
+def test_get_region_falls_back_to_session(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Sin la variable de entorno se respeta la region de ``aws configure``."""
     monkeypatch.delenv("AWS_DEFAULT_REGION", raising=False)
 
-    assert get_region() == "us-west-2"
+    region = get_region()
+
+    assert isinstance(region, str)
+    assert region == AWS_REGION or region == boto3.Session().region_name
+
+
+def test_get_region_has_usable_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    """La region resuelta nunca es vacia."""
+    monkeypatch.delenv("AWS_DEFAULT_REGION", raising=False)
+    monkeypatch.setattr(boto3, "Session", lambda *a, **k: SimpleNamespace(region_name=None))
+
+    assert get_region() == AWS_REGION

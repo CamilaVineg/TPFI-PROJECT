@@ -8,6 +8,26 @@ adhiere a [Semantic Versioning](https://semver.org/).
 
 ## [No publicado]
 
+### Agregado
+
+- `repository.py`: repositorios `DataRepository` y `AuditRepository`, ambos
+  bajo el patron Singleton, con acceso a `CorporateData` y `CorporateLog`.
+- `repository.py`: `get_cpu_info()` releva los datos de CPU exigidos por la
+  consigna, incluido el UUID de `uuid.getnode()`.
+- `proxy.py`: `DataProxy` implementa `get`/`set`/`list` sobre el repositorio,
+  con validacion de datos minimos y actualizacion parcial de registros.
+- `repository.py`: esquema de auditoria alineado con el utilizado en la tabla
+  `CorporateLog` (accion, `client_uuid`, `session_id`, timestamp ISO, `key`,
+  `cpu_info` anidado).
+- Se agrega `boto3-stubs` al grupo de desarrollo para validar tipos con mypy.
+
+### Corregido
+
+- `config.get_region()` delegaba en boto3 en lugar de usar la region
+  hardcodeada. Las tablas de la catedra estan en `us-east-1` y la region
+  anterior provocaba `ResourceNotFoundException` en toda operacion.
+- La region por defecto de la plantilla paso de `us-west-2` a `us-east-1`.
+
 ## [0.1.0] - Build 1
 
 ### Agregado

@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import os
 
+import boto3
+
 AWS_REGION = "us-west-2"
 CORPORATE_TABLE = "CorporateData"
 LOG_TABLE = "CorporateLog"
@@ -35,14 +37,24 @@ CORPORATE_FIELDS = (
 def get_region() -> str:
     """Devuelve la region de AWS efectiva.
 
-    Respeta la variable de entorno ``AWS_DEFAULT_REGION`` si esta definida, de
-    modo que la configuracion de ``aws configure`` tenga prioridad sobre el
-    valor por defecto de la plantilla.
+    La resolucion sigue el orden de precedencia que aplica boto3: primero la
+    variable de entorno ``AWS_DEFAULT_REGION``, luego la region configurada
+    con ``aws configure`` y, como ultimo recurso, el valor por defecto de la
+    plantilla.
+
+    Delegar en ``boto3.Session`` es importante porque las tablas de la catedra
+    pueden no estar en la region del valor por defecto, y pasar una region
+    equivocada a ``boto3.resource`` produce ``ResourceNotFoundException``.
 
     Returns:
         El nombre de la region.
     """
-    return os.environ.get("AWS_DEFAULT_REGION", AWS_REGION)
+    from_env = os.environ.get("AWS_DEFAULT_REGION")
+    if from_env:
+        return from_env
+
+    from_session = boto3.Session().region_name
+    return from_session or AWS_REGION
 
 
 def positive_int(value: str) -> int:
