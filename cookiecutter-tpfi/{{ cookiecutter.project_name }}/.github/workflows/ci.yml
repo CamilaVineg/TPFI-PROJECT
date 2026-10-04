@@ -68,6 +68,17 @@ jobs:
     runs-on: ubuntu-latest
     needs: quality
 
+    # La publicacion en GitHub Pages requiere escritura sobre el repositorio
+    # y emision de un token para Pages. Se concede solo a este job.
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: {% raw %}${{ steps.deploy.outputs.page_url }}{% endraw %}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -86,8 +97,11 @@ jobs:
       - name: Generar documentacion
         run: pdoc -o docs src/{{ cookiecutter.package_name }}
 
+      - name: Configurar GitHub Pages
+        uses: actions/configure-pages@v5
+
       - name: Publicar documentacion en GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4
+        id: deploy
+        uses: actions/upload-pages-artifact@v3
         with:
-          github_token: {% raw %}${{ secrets.GITHUB_TOKEN }}{% endraw %}
-          publish_dir: ./docs
+          path: ./docs
