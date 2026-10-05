@@ -10,6 +10,16 @@ adhiere a [Semantic Versioning](https://semver.org/).
 
 ### Agregado
 
+- `protocol.py`: protocolo de mensajes compartido entre servidor y clientes,
+  con encuadre de lineas JSON (`\n`), builders de requerimiento/respuesta/
+  notificacion y el canal `JsonSocket`.
+- `singleton_client.py`: cliente Singleton completo, que lee `input.json`, se
+  conecta al servidor, envia la accion y escribe la respuesta en `output.json`
+  o por salida estandar.
+- `observer_client.py`: cliente Observer completo, que se subscribe, queda
+  escuchando las notificaciones y reconecta cada `retry_interval` segundos si
+  se cae el socket.
+- Pruebas de `protocol.py`, `singleton_client.py` y `observer_client.py`.
 - `repository.py`: repositorios `DataRepository` y `AuditRepository`, ambos
   bajo el patron Singleton, con acceso a `CorporateData` y `CorporateLog`.
 - `repository.py`: `get_cpu_info()` releva los datos de CPU exigidos por la

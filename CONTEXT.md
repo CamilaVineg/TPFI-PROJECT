@@ -70,3 +70,27 @@ que convertirlo a texto o numero al construir la respuesta JSON del servidor.
 **Resultado:** 78 pruebas en verde con 89,6% de cobertura; `ruff`, `black`,
 `mypy --strict` y `bandit` sin observaciones; capa de datos y proxy verificados
 contra la base real.
+
+### 2026-10-05 - Clientes (Fase 5)
+
+**Objetivo:** implementar los dos clientes de la Fase 5 y definir el protocolo
+de mensajes que compartiran con el servidor.
+
+- Crear `protocol.py` con el encuadre de lineas JSON (`\n`) y los constructores
+  de mensajes `request`/`response`/`notification`, mas el canal `JsonSocket`.
+- Implementar `singleton_client.py`: lee `input.json`, agrega `session_id` y
+  `client_uuid`, se conecta, envia la accion y escribe la respuesta en
+  `output.json` o por stdout. Se agrego el argumento `-s/--host`.
+- Implementar `observer_client.py`: se subscribe con su `client_uuid`, queda
+  escuchando y mostrando cada notificacion, y reconecta cada
+  `retry_interval` segundos cuando se cae el socket.
+- Escribir `tests/test_protocol.py`, `tests/test_singleton_client.py` y
+  `tests/test_observer_client.py` con dobles de socket, sin red real.
+
+**Correccion relevante:** el servidor de la Fase 4 seguia siendo un esqueleto
+y no existia un protocolo definido en el repositorio. Se centralizo el formato
+de mensajes en `tpfi.protocol` para que el servidor lo reutilice y ambos lados
+queden acoplados al mismo contrato.
+
+**Resultado:** 110 pruebas en verde con 93,6% de cobertura; `ruff`, `black`,
+`mypy --strict` y `bandit` sin observaciones.
