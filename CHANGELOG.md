@@ -10,6 +10,10 @@ adhiere a [Semantic Versioning](https://semver.org/).
 
 ### Agregado
 
+- `server.py`: servidor de aplicaciones TCP (`ApplicationServer` y `ServerHandler`) que integra los patrones Proxy (`DataProxy`), Singleton (`DataRepository`, `AuditRepository`) y Observer (`ObservedSubject`).
+- `server.py`: soporte para las 4 acciones exigidas por la consigna (`get`, `list`, `set`, `subscribe`), con registro de auditoria en `CorporateLog` y notificacion en cascada a observadores suscritos ante operaciones `set`.
+- `tests/test_server.py`: suite completa de pruebas unitarias e integrales para el servidor TCP, cubriendo las 4 acciones, notificaciones en cascada, auditoria y manejo de errores.
+- `observer.py`: encuadre estandarizado con delimitador `\n` en las notificaciones enviadas por `ObservedSubject.notify`.
 - `protocol.py`: protocolo de mensajes compartido entre servidor y clientes,
   con encuadre de lineas JSON (`\n`), builders de requerimiento/respuesta/
   notificacion y el canal `JsonSocket`.

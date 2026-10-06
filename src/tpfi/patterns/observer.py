@@ -119,7 +119,7 @@ class ObservedSubject:
         Args:
             payload: Registro JSON a retransmitir.
         """
-        message = json.dumps(payload, default=str).encode("utf-8")
+        message = (json.dumps(payload, default=str) + "\n").encode("utf-8")
         with self._lock:
             targets = dict(self._observers)
 

@@ -94,3 +94,19 @@ queden acoplados al mismo contrato.
 
 **Resultado:** 110 pruebas en verde con 93,6% de cobertura; `ruff`, `black`,
 `mypy --strict` y `bandit` sin observaciones.
+
+### 2026-10-06 - Servidor TCP y Notificacion en Cascada (Fase 4)
+
+**Objetivo:** implementar el servidor TCP multihilo de aplicaciones (`SingletonProxyObserverTPFI`), integrando los patrones Proxy, Singleton y Observer, la notificacion en cascada y el registro obligatorio de auditoria en `CorporateLog`.
+
+- Diseñar y desarrollar `server.py` con las clases `ApplicationServer` (basada en `socketserver.ThreadingTCPServer`) y `ServerHandler` (`socketserver.BaseRequestHandler`).
+- Implementar el procesamiento de las 4 acciones exigidas por la consigna (`get`, `list`, `set`, `subscribe`):
+  - **Auditoria:** Cada requerimiento genera una entrada en `CorporateLog` a traves de `AuditRepository` (Singleton), incluyendo `client_uuid`, `session_id`, `action`, `key` (`id` o `*`), `timestamp` ISO e informacion de la CPU (`get_cpu_info()`).
+  - **`get` y `list`:** Intermediados por `DataProxy`, responden al cliente solicitante y cierran la conexion TCP.
+  - **`subscribe`:** Suscribe el socket del cliente en `ObservedSubject` (Observer), confirma la subscripcion y mantiene el socket abierto para recibir futuras notificaciones, desuscribiendo automaticamente al cliente ante desconexion.
+  - **`set`:** Realiza la actualizacion parcial mediante `DataProxy.set()`, responde al cliente solicitante y emite la notificacion en cascada a todos los observadores activos mediante `ObservedSubject.notify()`.
+- Ajustar `ObservedSubject.notify` en `patterns/observer.py` para asegurar el encuadre de lineas JSON terminadas en `\n` requeridas por `JsonSocket`.
+- Implementar `tests/test_server.py` cubriendo el ciclo de vida del servidor, las 4 acciones, las notificaciones en cascada hacia observadores, el registro de auditoria, la reutilizacion de puertos ocupados y las excepciones no controladas.
+- Validar todo el proyecto con `pytest` (124 pruebas en verde, **93.3% de cobertura**), `ruff check`, `black`, `mypy --strict` y `bandit`.
+
+**Resultado:** Fase 4 completada e integrada satisfactoriamente con 124 pruebas en verde y el 100% de los chequeos de calidad aprobados.
