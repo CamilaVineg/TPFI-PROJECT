@@ -16,7 +16,7 @@ consigna del TPFI.
 
 ### 2026-09-30 - Estructura inicial
 
-**Objetivo:** diseno del esqueleto del proyecto basado en Cookiecutter.
+**Objetivo:** diseño del esqueleto del proyecto basado en Cookiecutter.
 
 - Crear la plantilla `cookiecutter-tpfi` con `cookiecutter.json` y un hook
   `post_gen_project.py` que genere `VERSION`, `BUILD` y los archivos de
