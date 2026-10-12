@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "tpfi"
-version = "0.1.0"
+version = "0.4.0"
 description = "TPFI IS2 - Patron Proxy/Singleton/Observer sobre AWS DynamoDB"
 readme = "README.md"
 license = { text = "MIT" }

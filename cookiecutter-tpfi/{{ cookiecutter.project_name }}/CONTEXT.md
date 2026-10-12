@@ -1,7 +1,7 @@
 # CONTEXT.md
 
 Registro de los prompts utilizados durante el desarrollo de
-`TPFI-PROJECT` con asistencia de IA, conforme lo exige la
+`{{ cookiecutter.project_name }}` con asistencia de IA, conforme lo exige la
 consigna del TPFI.
 
 ## Convenciones
@@ -70,3 +70,78 @@ que convertirlo a texto o numero al construir la respuesta JSON del servidor.
 **Resultado:** 78 pruebas en verde con 89,6% de cobertura; `ruff`, `black`,
 `mypy --strict` y `bandit` sin observaciones; capa de datos y proxy verificados
 contra la base real.
+
+### 2026-10-05 - Clientes (Fase 5)
+
+**Objetivo:** implementar los dos clientes de la Fase 5 y definir el protocolo
+de mensajes que compartiran con el servidor.
+
+- Crear `protocol.py` con el encuadre de lineas JSON (`\n`) y los constructores
+  de mensajes `request`/`response`/`notification`, mas el canal `JsonSocket`.
+- Implementar `singleton_client.py`: lee `input.json`, agrega `session_id` y
+  `client_uuid`, se conecta, envia la accion y escribe la respuesta en
+  `output.json` o por stdout. Se agrego el argumento `-s/--host`.
+- Implementar `observer_client.py`: se subscribe con su `client_uuid`, queda
+  escuchando y mostrando cada notificacion, y reconecta cada
+  `retry_interval` segundos cuando se cae el socket.
+- Escribir `tests/test_protocol.py`, `tests/test_singleton_client.py` y
+  `tests/test_observer_client.py` con dobles de socket, sin red real.
+
+**Correccion relevante:** el servidor de la Fase 4 seguia siendo un esqueleto
+y no existia un protocolo definido en el repositorio. Se centralizo el formato
+de mensajes en `tpfi.protocol` para que el servidor lo reutilice y ambos lados
+queden acoplados al mismo contrato.
+
+**Resultado:** 110 pruebas en verde con 93,6% de cobertura; `ruff`, `black`,
+`mypy --strict` y `bandit` sin observaciones.
+
+### 2026-10-06 - Servidor TCP y Notificacion en Cascada (Fase 4)
+
+**Objetivo:** implementar el servidor TCP multihilo de aplicaciones (`SingletonProxyObserverTPFI`), integrando los patrones Proxy, Singleton y Observer, la notificacion en cascada y el registro obligatorio de auditoria en `CorporateLog`.
+
+- Diseñar y desarrollar `server.py` con las clases `ApplicationServer` (basada en `socketserver.ThreadingTCPServer`) y `ServerHandler` (`socketserver.BaseRequestHandler`).
+- Implementar el procesamiento de las 4 acciones exigidas por la consigna (`get`, `list`, `set`, `subscribe`):
+  - **Auditoria:** Cada requerimiento genera una entrada en `CorporateLog` a traves de `AuditRepository` (Singleton), incluyendo `client_uuid`, `session_id`, `action`, `key` (`id` o `*`), `timestamp` ISO e informacion de la CPU (`get_cpu_info()`).
+  - **`get` y `list`:** Intermediados por `DataProxy`, responden al cliente solicitante y cierran la conexion TCP.
+  - **`subscribe`:** Suscribe el socket del cliente en `ObservedSubject` (Observer), confirma la subscripcion y mantiene el socket abierto para recibir futuras notificaciones, desuscribiendo automaticamente al cliente ante desconexion.
+  - **`set`:** Realiza la actualizacion parcial mediante `DataProxy.set()`, responde al cliente solicitante y emite la notificacion en cascada a todos los observadores activos mediante `ObservedSubject.notify()`.
+- Ajustar `ObservedSubject.notify` en `patterns/observer.py` para asegurar el encuadre de lineas JSON terminadas en `\n` requeridas por `JsonSocket`.
+- Implementar `tests/test_server.py` cubriendo el ciclo de vida del servidor, las 4 acciones, las notificaciones en cascada hacia observadores, el registro de auditoria, la reutilizacion de puertos ocupados y las excepciones no controladas.
+- Validar todo el proyecto con `pytest` (124 pruebas en verde, **93.3% de cobertura**), `ruff check`, `black`, `mypy --strict` y `bandit`.
+
+**Resultado:** Fase 4 completada e integrada satisfactoriamente con 124 pruebas en verde y el 100% de los chequeos de calidad aprobados.
+
+### 2026-10-12 - Versionado, changelog y verificacion de integracion
+
+**Objetivo:** consolidar el registro de versiones del proyecto, documentar los
+cambios entregados y verificar el sistema completo de extremo a extremo.
+
+- Verificar la implementacion del servidor mediante una prueba de
+  integracion manual: se levanto un `ApplicationServer` real sobre un puerto
+  local y se lo interrogó con el protocolo de mensajes, sin dobles de prueba.
+- Comprobar contra la base real las 5 acciones: `get` de un registro existente,
+  `get` de un identificador inexistente, `list` completo, accion invalida y
+  `set` sin identificador.
+- Verificar la notificacion en cascada: un `observerclient` subscripto recibio
+  la confirmacion de suscripcion y la notificacion del `set`.
+- Confirmar la auditoria leyendo las entradas mas recientes de `CorporateLog`:
+  las 4 acciones quedaron registradas con `client_uuid`, `timestamp` y `key`.
+- Reescribir `CHANGELOG.md` agrupando los cambios por version (0.1.0, 0.2.0,
+  0.3.0 y 0.4.0) con las fechas reales del historial de git y la seccion de
+  autores correspondiente a cada version.
+- Actualizar en conjunto los archivos que llevan el versionado manual:
+  `VERSION`, `BUILD`, `version` en `pyproject.toml` y `__version__` en
+  `src/tpfi/__init__.py`. Se determino unificar la version en un unico lugar
+  a futuro, porque hoy esta replicada en cuatro archivos y ya se habia
+  desincronizado.
+
+**Correccion relevante:** el `CHANGELOG.md` presente conflicto de merge porque
+el servidor y el registro de versiones se modificaron sobre la misma seccion
+`[No publicado]`. Se resolvio conservando la descripcion del servidor escrita
+por el autor correspondiente y moviendo las tareas aun pendientes a una
+subseccion `### Pendiente`, de modo que no se perdiera ninguna de las dos
+versiones del registro.
+
+**Resultado:** 124 pruebas en verde con 93,3% de cobertura; `ruff`, `black`,
+`mypy --strict` y `bandit` sin observaciones; sistema verificado de extremo a
+extremo contra la base de datos.

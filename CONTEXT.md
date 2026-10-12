@@ -110,3 +110,38 @@ queden acoplados al mismo contrato.
 - Validar todo el proyecto con `pytest` (124 pruebas en verde, **93.3% de cobertura**), `ruff check`, `black`, `mypy --strict` y `bandit`.
 
 **Resultado:** Fase 4 completada e integrada satisfactoriamente con 124 pruebas en verde y el 100% de los chequeos de calidad aprobados.
+
+### 2026-10-12 - Versionado, changelog y verificacion de integracion
+
+**Objetivo:** consolidar el registro de versiones del proyecto, documentar los
+cambios entregados y verificar el sistema completo de extremo a extremo.
+
+- Verificar la implementacion del servidor mediante una prueba de
+  integracion manual: se levanto un `ApplicationServer` real sobre un puerto
+  local y se lo interrogó con el protocolo de mensajes, sin dobles de prueba.
+- Comprobar contra la base real las 5 acciones: `get` de un registro existente,
+  `get` de un identificador inexistente, `list` completo, accion invalida y
+  `set` sin identificador.
+- Verificar la notificacion en cascada: un `observerclient` subscripto recibio
+  la confirmacion de suscripcion y la notificacion del `set`.
+- Confirmar la auditoria leyendo las entradas mas recientes de `CorporateLog`:
+  las 4 acciones quedaron registradas con `client_uuid`, `timestamp` y `key`.
+- Reescribir `CHANGELOG.md` agrupando los cambios por version (0.1.0, 0.2.0,
+  0.3.0 y 0.4.0) con las fechas reales del historial de git y la seccion de
+  autores correspondiente a cada version.
+- Actualizar en conjunto los archivos que llevan el versionado manual:
+  `VERSION`, `BUILD`, `version` en `pyproject.toml` y `__version__` en
+  `src/tpfi/__init__.py`. Se determino unificar la version en un unico lugar
+  a futuro, porque hoy esta replicada en cuatro archivos y ya se habia
+  desincronizado.
+
+**Correccion relevante:** el `CHANGELOG.md` presente conflicto de merge porque
+el servidor y el registro de versiones se modificaron sobre la misma seccion
+`[No publicado]`. Se resolvio conservando la descripcion del servidor escrita
+por el autor correspondiente y moviendo las tareas aun pendientes a una
+subseccion `### Pendiente`, de modo que no se perdiera ninguna de las dos
+versiones del registro.
+
+**Resultado:** 124 pruebas en verde con 93,3% de cobertura; `ruff`, `black`,
+`mypy --strict` y `bandit` sin observaciones; sistema verificado de extremo a
+extremo contra la base de datos.

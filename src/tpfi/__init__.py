@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import pathlib
 
-__version__ = "0.1.0"
+__version__ = "0.4.0"
 
 _BUILD_FILE = pathlib.Path(__file__).resolve().parents[2] / "BUILD"
 
