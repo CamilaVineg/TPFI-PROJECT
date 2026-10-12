@@ -51,3 +51,7 @@ Thumbs.db
 # Documentacion generada
 docs/_build/
 docs/modules.html
+
+# Informe PDF y su generador: se mantienen fuera del repositorio
+INFORME-{{ cookiecutter.project_name }}.pdf
+tools/

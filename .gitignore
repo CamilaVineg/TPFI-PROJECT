@@ -51,3 +51,8 @@ Thumbs.db
 # Documentacion generada
 docs/_build/
 docs/modules.html
+
+# Informe PDF y su generador: viven fuera del repositorio, en la carpeta
+# superior TPFI/informe. Se dejan ignorados para evitar subirlos por error.
+INFORME-TPFI.pdf
+tools/
