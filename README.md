@@ -7,11 +7,20 @@ DynamoDB en AWS, con un servidor de aplicaciones TCP y dos clientes.
 
 ## Componentes
 
-| Programa | Modulo | Descripcion |
+| Programa (consigna) | Archivo | Descripcion |
 | --- | --- | --- |
-| `singletonproxyobserver` | `tpfi.server` | Servidor TCP: Proxy + Singleton + Observer + auditoria. |
-| `singletonclient` | `tpfi.singleton_client` | Cliente que consulta o modifica `CorporateData`. |
-| `observerclient` | `tpfi.observer_client` | Cliente suscripto que recibe notificaciones de cambios. |
+| `SingletonProxyObserverTPFI` | `src/tpfi/singletonproxyobserver.py` | Servidor TCP: Proxy + Singleton + Observer + auditoria. |
+| `SingletonClient` | `src/tpfi/singletonclient.py` | Cliente que consulta o modifica `CorporateData`. |
+| `ObserverClient` | `src/tpfi/observerclient.py` | Cliente suscripto que recibe notificaciones de cambios. |
+
+Los modulos usan el mismo nombre que los programas del enunciado. Cada uno se
+ejecuta mediante el comando homonimo instalado en el entorno virtual:
+
+```bash
+singletonproxyobserver -p=8080 -v
+singletonclient -i=input.json -o=output.json -v
+observerclient -s=localhost -p=8080 -v
+```
 
 ## Patrones
 

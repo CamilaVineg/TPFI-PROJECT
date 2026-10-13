@@ -30,9 +30,9 @@ dev = [
 ]
 
 [project.scripts]
-singletonproxyobserver = "tpfi.server:main"
-singletonclient = "tpfi.singleton_client:main"
-observerclient = "tpfi.observer_client:main"
+singletonproxyobserver = "tpfi.singletonproxyobserver:main"
+singletonclient = "tpfi.singletonclient:main"
+observerclient = "tpfi.observerclient:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/tpfi"]

@@ -1,5 +1,6 @@
-"""Punto de entrada del cliente Observer.
+"""Punto de entrada del cliente Observer: ``observerclient.py``.
 
+Este es el programa que la consigna denomina ``ObserverClient``.
 Cliente que se suscribe a las actualizaciones de la tabla
 ``CorporateData`` y permanece escuchando las notificaciones
 que el servidor le retransmite.

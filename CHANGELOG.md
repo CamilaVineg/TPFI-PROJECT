@@ -11,6 +11,10 @@ y los autores que participaron en el trabajo durante ese periodo.
 
 ## [No publicado]
 
+### Cambiado
+
+- Los tres programas se renombraron para coincidir exactamente con la nomenclatura de la consigna: `server.py` pasa a `singletonproxyobserver.py`, `singleton_client.py` a `singletonclient.py` y `observer_client.py` a `observerclient.py`. Se actualizaron los `entry points` de `pyproject.toml`, los imports y las pruebas correspondientes. Los nombres no usan guiones, por lo que son identificadores validos en Python.
+
 ### Pendiente
 
 - Pruebas de aceptacion de los casos exigidos por la consigna: argumentos

@@ -1,5 +1,6 @@
-"""Punto de entrada del servidor de aplicaciones.
+"""Punto de entrada del servidor de aplicaciones: ``singletonproxyobserver.py``.
 
+Este es el programa que la consigna denomina ``SingletonProxyObserverTPFI``.
 Servidor TCP que implementa los patrones Proxy, Singleton y Observer sobre las
 tablas ``CorporateData`` y ``CorporateLog``.
 """

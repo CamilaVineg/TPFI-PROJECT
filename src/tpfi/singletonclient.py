@@ -1,5 +1,6 @@
-"""Punto de entrada del cliente Singleton.
+"""Punto de entrada del cliente Singleton: ``singletonclient.py``.
 
+Este es el programa que la consigna denomina ``SingletonClient``.
 Cliente que consulta o modifica los datos de la tabla
 ``CorporateData`` a traves del servidor de aplicaciones.
 

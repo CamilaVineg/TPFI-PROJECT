@@ -19,7 +19,7 @@ from tpfi.protocol import (
     JsonSocket,
 )
 from tpfi.proxy import DataProxy
-from tpfi.server import ApplicationServer, ServerHandler, main, parse_args
+from tpfi.singletonproxyobserver import ApplicationServer, ServerHandler, main, parse_args
 
 
 class FakeAuditRepository:

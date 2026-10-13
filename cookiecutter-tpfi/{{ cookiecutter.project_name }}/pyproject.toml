@@ -30,9 +30,9 @@ dev = [
 ]
 
 [project.scripts]
-{{ cookiecutter.app_name }} = "{{ cookiecutter.package_name }}.server:main"
-{{ cookiecutter.client_name }} = "{{ cookiecutter.package_name }}.singleton_client:main"
-{{ cookiecutter.observer_name }} = "{{ cookiecutter.package_name }}.observer_client:main"
+{{ cookiecutter.app_name }} = "{{ cookiecutter.package_name }}.singletonproxyobserver:main"
+{{ cookiecutter.client_name }} = "{{ cookiecutter.package_name }}.singletonclient:main"
+{{ cookiecutter.observer_name }} = "{{ cookiecutter.package_name }}.observerclient:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/{{ cookiecutter.package_name }}"]
