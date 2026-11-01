@@ -9,6 +9,7 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
+from botocore.exceptions import ClientError
 
 from tpfi.patterns.singleton import SingletonABCMeta
 from tpfi.repository import AuditRepository, DataRepository, get_cpu_info
@@ -22,7 +23,7 @@ class FakeTable:
         self.items: dict[str, dict[str, Any]] = {}
         self.get_calls: list[dict[str, Any]] = []
         self.put_calls: list[dict[str, Any]] = []
-        self.scan_count = 0
+        self.scan_calls: list[dict[str, Any]] = []
 
     def get_item(self, Key: dict[str, Any]) -> dict[str, Any]:  # noqa: N803
         """Simula ``get_item``.
@@ -52,14 +53,71 @@ class FakeTable:
         self.items[Item["id"]] = dict(Item)
         return {}
 
-    def scan(self) -> dict[str, Any]:
-        """Simula ``scan`` devolviendo todos los elementos.
+    def scan(self, **kwargs: Any) -> dict[str, Any]:
+        """Simula ``scan`` devolviendo todos los elementos en una pagina.
+
+        Args:
+            **kwargs: Parametros de la llamada, como ``ExclusiveStartKey``.
 
         Returns:
-            Un diccionario con la lista ``Items``.
+            Un diccionario con la lista ``Items`` y sin ``LastEvaluatedKey``,
+            porque la tabla simulada cabe entera en una sola pagina.
         """
-        self.scan_count += 1
+        self.scan_calls.append(dict(kwargs))
         return {"Items": [dict(item) for item in self.items.values()]}
+
+
+class PagedFakeTable:
+    """Doble que simula la paginacion real de DynamoDB.
+
+    Cada llamada a ``scan`` devuelve una pagina y, salvo en la ultima, incluye
+    una ``LastEvaluatedKey`` que obliga a pedir la siguiente.
+    """
+
+    def __init__(self, pages: list[list[dict[str, Any]]]) -> None:
+        """Carga las paginas que devolvera la tabla.
+
+        Args:
+            pages: Contenido de cada pagina, en orden.
+        """
+        self.pages = pages
+        self.requests: list[dict[str, Any]] = []
+
+    def scan(self, **kwargs: Any) -> dict[str, Any]:
+        """Devuelve la pagina indicada por ``ExclusiveStartKey``.
+
+        Args:
+            **kwargs: Parametros de la llamada; ``ExclusiveStartKey`` indica
+                el numero de pagina a entregar.
+
+        Returns:
+            Un diccionario con ``Items`` de la pagina y, si no es la ultima,
+            con ``LastEvaluatedKey`` apuntando a la siguiente.
+        """
+        self.requests.append(dict(kwargs))
+        index = int(kwargs.get("ExclusiveStartKey", {}).get("page", 0))
+        response: dict[str, Any] = {"Items": [dict(item) for item in self.pages[index]]}
+        if index + 1 < len(self.pages):
+            response["LastEvaluatedKey"] = {"page": index + 1}
+        return response
+
+
+class FailingTable:
+    """Doble que simula un rechazo de AWS al recorrer la tabla."""
+
+    def scan(self, **kwargs: Any) -> dict[str, Any]:
+        """Lanza el mismo error que devuelve DynamoDB ante un fallo.
+
+        Args:
+            **kwargs: Parametros de la llamada, no utilizados.
+
+        Raises:
+            ClientError: Siempre, para verificar el manejo de errores.
+        """
+        raise ClientError(
+            {"Error": {"Code": "InternalServerError", "Message": "fallo simulado"}},
+            "Scan",
+        )
 
 
 @pytest.fixture(autouse=True)
@@ -160,6 +218,75 @@ def test_list_on_empty_table(data_repo: DataRepository) -> None:
     assert data_repo.list() == []
 
 
+def test_scan_yields_every_item(data_repo: DataRepository) -> None:
+    """El recorrido entrega cada registro de la tabla."""
+    data_repo.put("A", {"sede": "FCyT"})
+    data_repo.put("B", {"sede": "FQyT"})
+
+    assert {record["id"] for record in data_repo.scan()} == {"A", "B"}
+
+
+def test_scan_on_empty_table(data_repo: DataRepository) -> None:
+    """Una tabla vacia no entrega ningun registro."""
+    assert list(data_repo.scan()) == []
+
+
+def test_scan_does_not_query_until_consumed() -> None:
+    """El recorrido es perezoso: no consulta AWS hasta el primer registro."""
+    repo = DataRepository()
+    table = FakeTable()
+    repo._table = table  # type: ignore[assignment]
+    table.items["A"] = {"id": "A"}
+
+    iterator = repo.scan()
+
+    assert table.scan_calls == []
+    assert list(iterator) == [{"id": "A"}]
+    assert len(table.scan_calls) == 1
+
+
+def test_scan_follows_last_evaluated_key() -> None:
+    """El recorrido pide la pagina siguiente mientras AWS la indique."""
+    repo = DataRepository()
+    table = PagedFakeTable([[{"id": "A"}, {"id": "B"}], [{"id": "C"}]])
+    repo._table = table  # type: ignore[assignment]
+
+    records = list(repo.scan())
+
+    assert [record["id"] for record in records] == ["A", "B", "C"]
+    assert len(table.requests) == 2
+    assert "ExclusiveStartKey" not in table.requests[0]
+    assert table.requests[1]["ExclusiveStartKey"] == {"page": 1}
+
+
+def test_scan_stops_without_last_evaluated_key() -> None:
+    """Sin ``LastEvaluatedKey`` no se pide una segunda pagina."""
+    repo = DataRepository()
+    table = PagedFakeTable([[{"id": "A"}]])
+    repo._table = table  # type: ignore[assignment]
+
+    assert list(repo.scan()) == [{"id": "A"}]
+    assert len(table.requests) == 1
+
+
+def test_list_includes_every_page() -> None:
+    """El listado completo incluye los registros de todas las paginas."""
+    repo = DataRepository()
+    table = PagedFakeTable([[{"id": "A"}], [{"id": "B"}], [{"id": "C"}]])
+    repo._table = table  # type: ignore[assignment]
+
+    assert len(repo.list()) == 3
+
+
+def test_scan_propagates_aws_errors() -> None:
+    """Un rechazo de AWS se propaga en lugar de devolver un listado vacio."""
+    repo = DataRepository()
+    repo._table = FailingTable()  # type: ignore[assignment]
+
+    with pytest.raises(ClientError):
+        list(repo.scan())
+
+
 def test_audit_record_has_expected_schema(audit_repo: AuditRepository) -> None:
     """La pista de auditoria incluye todos los campos exigidos."""
     entry = audit_repo.record(
@@ -206,6 +333,16 @@ def test_audit_record_is_persisted(audit_repo: AuditRepository) -> None:
 def test_audit_list_on_empty_table(audit_repo: AuditRepository) -> None:
     """Sin acciones registradas la pista esta vacia."""
     assert audit_repo.list() == []
+
+
+def test_audit_scan_paginates() -> None:
+    """La pista de auditoria tambien se recorre pagina por pagina."""
+    repo = AuditRepository()
+    table = PagedFakeTable([[{"id": "S-1"}], [{"id": "S-2"}]])
+    repo._table = table  # type: ignore[assignment]
+
+    assert len(list(repo.scan())) == 2
+    assert len(table.requests) == 2
 
 
 def test_cpu_info_contains_platform_data() -> None:

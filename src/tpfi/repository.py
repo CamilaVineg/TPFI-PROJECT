@@ -14,6 +14,7 @@ from __future__ import annotations
 import logging
 import platform
 import uuid
+from collections.abc import Iterator
 from typing import Any
 
 import boto3
@@ -68,6 +69,41 @@ def _build_table(table_name: str) -> Any:
     """
     resource = boto3.resource("dynamodb", region_name=get_region())
     return resource.Table(table_name)
+
+
+def _paginate(table: Any, table_name: str) -> Iterator[dict[str, Any]]:
+    r"""Recorre ``table`` por paginas hasta agotarla.
+
+    DynamoDB entrega como maximo 1 MB de datos por llamada a ``scan``. Si
+    quedan elementos devuelve una ``LastEvaluatedKey`` que debe reenviarse como
+    ``ExclusiveStartKey`` para obtener la pagina siguiente. Omitir ese paso
+    produce un listado incompleto sin informar ningun error, que es justamente
+    el defecto que corrige el recorrido por iterador.
+
+    Args:
+        table: Recurso ``Table`` de boto3.
+        table_name: Nombre de la tabla, usado en los mensajes de error.
+
+    Yields:
+        Cada registro de la tabla, de a uno y en el orden que entrega AWS.
+
+    Raises:
+        BotoCoreError: Si falla la comunicacion con AWS.
+        ClientError: Si AWS rechaza la operacion.
+    """
+    request: dict[str, Any] = {}
+    try:
+        while True:
+            response = table.scan(**request)
+            items: list[dict[str, Any]] = response.get("Items", [])
+            yield from items
+            last_key: dict[str, Any] | None = response.get("LastEvaluatedKey")
+            if not last_key:
+                return
+            request["ExclusiveStartKey"] = last_key
+    except (BotoCoreError, ClientError) as err:
+        logger.error("Error recorriendo la tabla %s: %s", table_name, err)
+        raise
 
 
 class DataRepository(metaclass=SingletonABCMeta):
@@ -128,8 +164,24 @@ class DataRepository(metaclass=SingletonABCMeta):
             return None
         return dict(item)
 
+    def scan(self) -> Iterator[dict[str, Any]]:
+        """Recorre la tabla completa resolviendo la paginacion.
+
+        Cada pagina se pide recien cuando el consumidor agota la anterior, de
+        modo que el recorrido no carga la tabla entera en memoria ni pierde
+        registros cuando supera el limite de 1 MB por llamada.
+
+        Returns:
+            Un iterador perezoso sobre todos los registros de la tabla.
+        """
+        return _paginate(self.table, self._table_name)
+
     def list(self) -> list[dict[str, Any]]:
         """Devuelve todos los registros de la tabla.
+
+        Materializa :meth:`scan`, porque el protocolo responde con un unico
+        mensaje JSON. Para recorridos que no necesiten la lista completa
+        conviene usar el iterador directamente.
 
         Returns:
             La lista completa de registros.
@@ -138,13 +190,7 @@ class DataRepository(metaclass=SingletonABCMeta):
             BotoCoreError: Si falla la comunicacion con AWS.
             ClientError: Si AWS rechaza la operacion.
         """
-        try:
-            response = self.table.scan()
-        except (BotoCoreError, ClientError) as err:
-            logger.error("Error listando los registros: %s", err)
-            raise
-        items = response.get("Items", [])
-        return [dict(item) for item in items]
+        return list(self.scan())
 
     def put(self, record_id: str, values: dict[str, Any]) -> dict[str, Any]:
         """Escribe un registro completo, reemplazando el contenido previo.
@@ -248,8 +294,19 @@ class AuditRepository(metaclass=SingletonABCMeta):
         logger.info("Auditoria registrada: accion=%s uuid=%s", action, client_uuid)
         return entry
 
+    def scan(self) -> Iterator[dict[str, Any]]:
+        """Recorre la pista de auditoria resolviendo la paginacion.
+
+        Returns:
+            Un iterador perezoso sobre todas las entradas registradas.
+        """
+        return _paginate(self.table, self._table_name)
+
     def list(self) -> list[dict[str, Any]]:
         """Devuelve todas las entradas de auditoria.
+
+        Materializa :meth:`scan`, porque se usa para inspeccionar la pista
+        completa desde las pruebas y el diagnostico.
 
         Returns:
             La lista completa de entradas de la pista.
@@ -258,10 +315,4 @@ class AuditRepository(metaclass=SingletonABCMeta):
             BotoCoreError: Si falla la comunicacion con AWS.
             ClientError: Si AWS rechaza la operacion.
         """
-        try:
-            response = self.table.scan()
-        except (BotoCoreError, ClientError) as err:
-            logger.error("Error listando la auditoria: %s", err)
-            raise
-        items = response.get("Items", [])
-        return [dict(item) for item in items]
+        return list(self.scan())

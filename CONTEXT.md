@@ -145,3 +145,32 @@ versiones del registro.
 **Resultado:** 124 pruebas en verde con 93,3% de cobertura; `ruff`, `black`,
 `mypy --strict` y `bandit` sin observaciones; sistema verificado de extremo a
 extremo contra la base de datos.
+
+### 2026-10-28 - Patron Iterator y paginacion de DynamoDB
+
+**Objetivo:** incorporar el patron Iterator para corregir el listado
+incompleto de DynamoDB y ofrecer un recorrido filtrado y ordenado de
+`CorporateData`.
+
+- Evaluar donde el patron aporta un beneficio real y no solo estructura: se
+  descarto aplicarlo en `ObservedSubject.notify` (ya itera sobre una copia) y
+  en `DataProxy` (no es una coleccion).
+- Detectar que `DataRepository.list()` y `AuditRepository.list()` ignoraban
+  `LastEvaluatedKey`, por lo que `scan` devolvia como maximo 1 MB sin avisar.
+- Implementar `patterns/iterator.py` con `IteratorProtocol`,
+  `AggregateProtocol` y `AggregateMixin`, dejando explicita la equivalencia
+  con la notacion GoF.
+- Implementar `collection.py` con `CorporateDataCollection` (agregado) y
+  `RecordIterator` (iterador concreto), con filtros por igualdad, orden
+  opcional y cierre del generador de origen.
+- Agregar `scan()` a ambos repositorios y conservar `list()` como
+  materializacion del recorrido, para no cambiar el contrato del protocolo.
+- Resolver la accion `list` del proxy a traves de la coleccion.
+
+**Correccion relevante:** la primera version de `RecordIterator.close()` solo
+cerraba la expresion generadora del filtro, que no cierra por si sola el
+iterable del que se alimenta. La prueba de liberacion de la fuente lo detecto y
+se corrigio cerrando tambien el origen.
+
+**Resultado:** 163 pruebas en verde con 94,9% de cobertura; `ruff`, `black`,
+`mypy --strict` y `bandit` sin observaciones.

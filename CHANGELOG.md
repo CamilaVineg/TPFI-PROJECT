@@ -11,10 +11,6 @@ y los autores que participaron en el trabajo durante ese periodo.
 
 ## [No publicado]
 
-### Cambiado
-
-- Los tres programas se renombraron para coincidir exactamente con la nomenclatura de la consigna: `server.py` pasa a `singletonproxyobserver.py`, `singleton_client.py` a `singletonclient.py` y `observer_client.py` a `observerclient.py`. Se actualizaron los `entry points` de `pyproject.toml`, los imports y las pruebas correspondientes. Los nombres no usan guiones, por lo que son identificadores validos en Python.
-
 ### Pendiente
 
 - Pruebas de aceptacion de los casos exigidos por la consigna: argumentos
@@ -22,6 +18,38 @@ y los autores que participaron en el trabajo durante ese periodo.
   servidor caido y reintento de levantar el servidor dos veces.
 - Pruebas de los patrones con `hypothesis`.
 - Diagramas UML de actividad (proxy) y de estado (observer).
+
+## [0.5.0] - 2026-10-28
+
+### Agregado
+
+- `patterns/iterator.py`: patron Iterator con `IteratorProtocol`,
+  `AggregateProtocol` y `AggregateMixin`, y la correspondencia explicita entre
+  la notacion GoF y los iteradores nativos de Python.
+- `collection.py`: `CorporateDataCollection` (agregado) y `RecordIterator`
+  (iterador concreto), que recorren `CorporateData` con filtros por igualdad y
+  orden opcional, sin materializar la tabla.
+- `repository.py`: `scan()` en `DataRepository` y `AuditRepository`, que
+  recorre la tabla pagina por pagina siguiendo `LastEvaluatedKey`.
+- Pruebas de paginacion multietapa, filtrado, orden, evaluacion perezosa y
+  liberacion del generador de origen.
+
+### Corregido
+
+- `repository.py`: el listado se interrumpia en el limite de 1 MB por llamada
+  a `scan` y devolvia resultados incompletos sin informar error. Ahora el
+  recorrido sigue `LastEvaluatedKey` hasta agotar la tabla.
+
+### Cambiado
+
+- `proxy.py`: la accion `list` se resuelve con la coleccion y el iterador del
+  patron; la respuesta sigue siendo una lista, porque el protocolo devuelve un
+  unico mensaje JSON.
+- Los tres programas se renombraron para coincidir exactamente con la nomenclatura de la consigna: `server.py` pasa a `singletonproxyobserver.py`, `singleton_client.py` a `singletonclient.py` y `observer_client.py` a `observerclient.py`. Se actualizaron los `entry points` de `pyproject.toml`, los imports y las pruebas correspondientes. Los nombres no usan guiones, por lo que son identificadores validos en Python.
+
+### Autores
+
+- Camila Vinegar
 
 ## [0.4.0] - 2026-10-06
 

@@ -59,8 +59,13 @@ class FakeDataRepository:
         item = self.items.get(record_id)
         return dict(item) if item is not None else None
 
-    def list(self) -> list[dict[str, Any]]:
-        return [dict(item) for item in self.items.values()]
+    def scan(self) -> Iterator[dict[str, Any]]:
+        """Simula el recorrido paginado de la tabla.
+
+        Yields:
+            Copias de todos los registros almacenados.
+        """
+        yield from (dict(item) for item in self.items.values())
 
     def put(self, record_id: str, values: dict[str, Any]) -> dict[str, Any]:
         item = {"id": record_id, **values}

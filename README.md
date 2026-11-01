@@ -76,7 +76,7 @@ pdoc -o docs src/tpfi
 
 ```
 TPFI-PROJECT/
-|-- src/tpfi/    Codigo fuente
+|-- src/tpfi/    Codigo fuente (Singleton, Proxy, Observer e Iterator)
 |-- tests/                                 Pruebas unitarias y de aceptacion
 |-- docs/                                  Documentacion generada con pdoc
 |-- VERSION, BUILD                         Registro de version y build

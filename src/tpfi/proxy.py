@@ -18,6 +18,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from tpfi.collection import CorporateDataCollection
 from tpfi.patterns.proxy import ProxyInterface
 from tpfi.repository import DataRepository
 
@@ -51,11 +52,17 @@ class DataProxy(ProxyInterface):
                 que es el comportamiento esperado en el servidor.
         """
         self._repository = repository if repository is not None else DataRepository()
+        self._collection = CorporateDataCollection(self._repository)
 
     @property
     def repository(self) -> DataRepository:
         """Repositorio Singleton sobre el que delega el proxy."""
         return self._repository
+
+    @property
+    def collection(self) -> CorporateDataCollection:
+        """Coleccion recorrible sobre la que se resuelve el listado."""
+        return self._collection
 
     def get(self, record_id: str) -> dict[str, Any] | None:
         """Valida y resuelve un requerimiento de lectura por clave.
@@ -76,11 +83,15 @@ class DataProxy(ProxyInterface):
     def list(self) -> list[dict[str, Any]]:
         """Resuelve un requerimiento de listado completo de la tabla.
 
+        Recorre la coleccion con el iterador del patron, que resuelve la
+        paginacion de DynamoDB, y materializa el resultado porque la respuesta
+        del protocolo es un unico mensaje JSON.
+
         Returns:
             Todos los registros de la tabla.
         """
         logger.debug("Proxy: list de la tabla completa")
-        return self._repository.list()
+        return list(self._collection.create_iterator())
 
     def set(self, record_id: str, values: dict[str, Any]) -> dict[str, Any] | None:
         """Valida y resuelve una actualizacion parcial de un registro.

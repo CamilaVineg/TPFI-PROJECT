@@ -6,10 +6,12 @@ reales de la cuenta.
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from typing import Any
 
 import pytest
 
+from tpfi.collection import CorporateDataCollection
 from tpfi.proxy import DataProxy, InvalidRequestError
 
 
@@ -40,13 +42,13 @@ class FakeRepository:
         found = self.items.get(record_id)
         return dict(found) if found is not None else None
 
-    def list(self) -> list[dict[str, Any]]:
-        """Simula el listado completo de la tabla.
+    def scan(self) -> Iterator[dict[str, Any]]:
+        """Simula el recorrido paginado de la tabla.
 
-        Returns:
-            Copias de todos los registros.
+        Yields:
+            Copias de todos los registros, en una unica pagina.
         """
-        return [dict(item) for item in self.items.values()]
+        yield from (dict(item) for item in self.items.values())
 
     def put(self, record_id: str, values: dict[str, Any]) -> dict[str, Any]:
         """Simula la escritura de un registro completo.
@@ -201,3 +203,23 @@ def test_proxy_covers_proxy_interface(proxy: DataProxy) -> None:
     from tpfi.patterns.proxy import ProxyInterface
 
     assert isinstance(proxy, ProxyInterface)
+
+
+def test_list_uses_the_collection_iterator(proxy: DataProxy, repository: FakeRepository) -> None:
+    """El listado se resuelve con la coleccion del patron Iterator."""
+    assert isinstance(proxy.collection, CorporateDataCollection)
+    assert proxy.collection.repository is repository
+
+
+def test_list_returns_a_materialized_list(proxy: DataProxy) -> None:
+    """El protocolo necesita una lista, no un iterador, para serializar."""
+    assert isinstance(proxy.list(), list)
+
+
+def test_list_can_be_filtered_through_the_collection(proxy: DataProxy) -> None:
+    """La coleccion expone el recorrido filtrado que resuelve el iterador."""
+    proxy.set("OTRO", {"sede": "FQyT"})
+
+    filtered = list(proxy.collection.create_iterator(filters={"sede": "FQyT"}))
+
+    assert [record["id"] for record in filtered] == ["OTRO"]
