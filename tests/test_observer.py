@@ -79,13 +79,38 @@ def test_subscribe_changes_state_to_subscribed(sock: FakeSocket) -> None:
     assert subject.subscriber_count == 1
 
 
-def test_subscribe_twice_raises_error(sock: FakeSocket) -> None:
-    """No se admite la subscripcion duplicada de un mismo UUID."""
+def test_subscribe_same_uuid_twice_keeps_both_sockets(sock: FakeSocket) -> None:
+    """Un mismo UUID puede tener varios sockets subscriptos."""
+    other = FakeSocket()
     subject = ObservedSubject()
     subject.subscribe("cpu-1", sock)  # type: ignore[arg-type]
+    subject.subscribe("cpu-1", other)  # type: ignore[arg-type]
 
-    with pytest.raises(ValueError, match="ya se encuentra subscripto"):
-        subject.subscribe("cpu-1", sock)  # type: ignore[arg-type]
+    assert subject.subscriber_count == 2
+
+    subject.notify({"id": "x"})
+
+    assert len(sock.sent) == 1
+    assert len(other.sent) == 1
+
+
+def test_unsubscribe_one_socket_keeps_the_other() -> None:
+    """Desuscribir un socket no afecta a los demas del mismo UUID."""
+    first = FakeSocket()
+    second = FakeSocket()
+    subject = ObservedSubject()
+    subject.subscribe("cpu-1", first)  # type: ignore[arg-type]
+    subject.subscribe("cpu-1", second)  # type: ignore[arg-type]
+
+    subject.unsubscribe("cpu-1", first)  # type: ignore[arg-type]
+
+    assert subject.subscriber_count == 1
+    assert subject.state is SubjectState.SUBSCRIBED
+
+    subject.notify({"id": "x"})
+
+    assert first.sent == []
+    assert len(second.sent) == 1
 
 
 def test_notify_delivers_json_to_observers(sock: FakeSocket) -> None:

@@ -5,11 +5,13 @@ from __future__ import annotations
 import socket
 import threading
 import time
+import uuid
 from collections.abc import Iterator
 from typing import Any
 
 import pytest
 
+from tpfi.config import CORPORATE_FIELDS
 from tpfi.patterns.observer import ObservedSubject
 from tpfi.protocol import (
     STATUS_ERROR,
@@ -72,11 +74,32 @@ class FakeDataRepository:
         self.items[record_id] = item
         return item
 
+    def merge(self, record_id: str, values: dict[str, Any]) -> dict[str, Any]:
+        """Simula la actualizacion atomica del repositorio real.
+
+        Args:
+            record_id: Clave primaria del registro.
+            values: Campos informados por el cliente.
+
+        Returns:
+            El registro resultante de la actualizacion.
+        """
+        current = self.items.get(record_id)
+        if current is None:
+            merged: dict[str, Any] = dict.fromkeys(CORPORATE_FIELDS)
+            merged.update(values)
+            merged["id"] = record_id
+        else:
+            merged = {**current, **values}
+        self.items[record_id] = merged
+        return dict(merged)
+
+
+ServerFixture = tuple[ApplicationServer, int, FakeAuditRepository, FakeDataRepository]
+
 
 @pytest.fixture
-def test_server() -> (
-    Iterator[tuple[ApplicationServer, int, FakeAuditRepository, FakeDataRepository]]
-):
+def test_server() -> Iterator[ServerFixture]:
     """Crea e inicia un servidor de aplicaciones en un puerto efimero (0)."""
     fake_repo = FakeDataRepository()
     proxy = DataProxy(repository=fake_repo)  # type: ignore[arg-type]
@@ -112,7 +135,7 @@ def test_server_parse_args_defaults() -> None:
 
 
 def test_server_get_action_success(
-    test_server: tuple[ApplicationServer, int, FakeAuditRepository, FakeDataRepository],
+    test_server: ServerFixture,
 ) -> None:
     """La accion get devuelve el registro y genera auditoria."""
     _, port, audit_repo, _ = test_server
@@ -132,7 +155,8 @@ def test_server_get_action_success(
 
     assert response["type"] == TYPE_RESPONSE
     assert response["status"] == STATUS_OK
-    assert response["session_id"] == "sess-get-1"
+    assert response["session_id"] != "sess-get-1"
+    uuid.UUID(response["session_id"])
     assert response["data"]["id"] == "REC-001"
     assert response["data"]["sede"] == "FCyT"
 
@@ -140,10 +164,11 @@ def test_server_get_action_success(
     assert audit_repo.records[0]["action"] == "get"
     assert audit_repo.records[0]["key"] == "REC-001"
     assert audit_repo.records[0]["client_uuid"] == "cpu-123"
+    assert audit_repo.records[0]["session_id"] == response["session_id"]
 
 
 def test_server_get_action_not_found(
-    test_server: tuple[ApplicationServer, int, FakeAuditRepository, FakeDataRepository],
+    test_server: ServerFixture,
 ) -> None:
     """La accion get sobre un registro inexistente devuelve error y audita."""
     _, port, audit_repo, _ = test_server
@@ -171,7 +196,7 @@ def test_server_get_action_not_found(
 
 
 def test_server_list_action_success(
-    test_server: tuple[ApplicationServer, int, FakeAuditRepository, FakeDataRepository],
+    test_server: ServerFixture,
 ) -> None:
     """La accion list devuelve todos los registros y audita."""
     _, port, audit_repo, _ = test_server
@@ -200,7 +225,7 @@ def test_server_list_action_success(
 
 
 def test_server_set_action_and_cascade_notification(
-    test_server: tuple[ApplicationServer, int, FakeAuditRepository, FakeDataRepository],
+    test_server: ServerFixture,
 ) -> None:
     """El set responde al solicitante y notifica en cascada a observadores."""
     _, port, audit_repo, fake_repo = test_server
@@ -250,7 +275,7 @@ def test_server_set_action_and_cascade_notification(
 
 
 def test_server_set_invalid_data(
-    test_server: tuple[ApplicationServer, int, FakeAuditRepository, FakeDataRepository],
+    test_server: ServerFixture,
 ) -> None:
     """Un set con data invalida rechaza el requerimiento con error."""
     _, port, _, _ = test_server
@@ -274,7 +299,7 @@ def test_server_set_invalid_data(
 
 
 def test_server_unknown_action(
-    test_server: tuple[ApplicationServer, int, FakeAuditRepository, FakeDataRepository],
+    test_server: ServerFixture,
 ) -> None:
     """Una accion no reconocida devuelve error."""
     _, port, _, _ = test_server
@@ -309,6 +334,16 @@ def test_server_main_failed_bind() -> None:
         bound_sock.close()
 
 
+def test_second_server_cannot_bind_the_same_port(
+    test_server: ServerFixture,
+) -> None:
+    """El servidor no admite una segunda instancia en el mismo puerto."""
+    _, port, _, _ = test_server
+
+    with pytest.raises(OSError):
+        ApplicationServer(("127.0.0.1", port), ServerHandler)
+
+
 def test_server_main_keyboard_interrupt(monkeypatch: pytest.MonkeyPatch) -> None:
     """KeyboardInterrupt en main finaliza ordenadamente con codigo 0."""
 
@@ -320,7 +355,7 @@ def test_server_main_keyboard_interrupt(monkeypatch: pytest.MonkeyPatch) -> None
 
 
 def test_server_invalid_json_message(
-    test_server: tuple[ApplicationServer, int, FakeAuditRepository, FakeDataRepository],
+    test_server: ServerFixture,
 ) -> None:
     """Enviar JSON invalido es ignorado sin colapsar el servidor."""
     _, port, _, _ = test_server
@@ -330,27 +365,35 @@ def test_server_invalid_json_message(
         time.sleep(0.05)
 
 
-def test_server_audit_exception(
-    test_server: tuple[ApplicationServer, int, FakeAuditRepository, FakeDataRepository],
+def test_server_audit_exception_aborts_the_action(
+    test_server: ServerFixture,
 ) -> None:
-    """Una falla en auditoria se registra pero permite continuar."""
-    _, port, audit_repo, _ = test_server
+    """Si falla la auditoria, la accion no se ejecuta y se responde error."""
+    server, port, audit_repo, _ = test_server
+    list_calls: list[int] = []
 
     def fail_record(*args: Any, **kwargs: Any) -> Any:
         raise RuntimeError("Audit DB failure")
 
+    def tracking_list() -> list[dict[str, Any]]:
+        list_calls.append(1)
+        return []
+
     audit_repo.record = fail_record  # type: ignore[assignment]
+    server.proxy.list = tracking_list  # type: ignore[assignment]
 
     with socket.create_connection(("127.0.0.1", port), timeout=2.0) as sock:
         channel = JsonSocket(sock)
         channel.send({"type": "request", "action": "list", "session_id": "s1"})
         resp = channel.receive()
 
-    assert resp["status"] == STATUS_OK
+    assert resp["status"] == STATUS_ERROR
+    assert "auditoria" in resp["error"]
+    assert list_calls == []
 
 
 def test_server_proxy_unexpected_exception(
-    test_server: tuple[ApplicationServer, int, FakeAuditRepository, FakeDataRepository],
+    test_server: ServerFixture,
 ) -> None:
     """Una falla no controlada en el proxy retorna un error 500 interno."""
     server, port, _, _ = test_server
@@ -370,7 +413,7 @@ def test_server_proxy_unexpected_exception(
 
 
 def test_server_set_missing_record_id(
-    test_server: tuple[ApplicationServer, int, FakeAuditRepository, FakeDataRepository],
+    test_server: ServerFixture,
 ) -> None:
     """Un set sin id es rechazado con error."""
     _, port, _, _ = test_server
@@ -391,10 +434,10 @@ def test_server_set_missing_record_id(
     assert "obligatorio para set" in resp["error"]
 
 
-def test_server_subscribe_duplicate_error(
-    test_server: tuple[ApplicationServer, int, FakeAuditRepository, FakeDataRepository],
+def test_server_subscribe_same_uuid_from_two_clients(
+    test_server: ServerFixture,
 ) -> None:
-    """Suscribir dos veces el mismo UUID devuelve error al segundo intento."""
+    """Dos conexiones con el mismo UUID reciben la notificacion del set."""
     _, port, _, _ = test_server
 
     sock1 = socket.create_connection(("127.0.0.1", port), timeout=2.0)
@@ -407,8 +450,7 @@ def test_server_subscribe_duplicate_error(
             "session_id": "s-sub-1",
         }
     )
-    r1 = ch1.receive()
-    assert r1["status"] == STATUS_OK
+    assert ch1.receive()["status"] == STATUS_OK
 
     sock2 = socket.create_connection(("127.0.0.1", port), timeout=2.0)
     ch2 = JsonSocket(sock2)
@@ -420,9 +462,29 @@ def test_server_subscribe_duplicate_error(
             "session_id": "s-sub-2",
         }
     )
-    r2 = ch2.receive()
-    assert r2["status"] == STATUS_ERROR
-    assert "ya se encuentra subscripto" in r2["error"]
+    assert ch2.receive()["status"] == STATUS_OK
 
-    sock1.close()
-    sock2.close()
+    try:
+        with socket.create_connection(("127.0.0.1", port), timeout=2.0) as writer_sock:
+            writer = JsonSocket(writer_sock)
+            writer.send(
+                {
+                    "type": "request",
+                    "action": "set",
+                    "id": "UADER-FCyT-IS2",
+                    "data": {"sede": "Central"},
+                    "session_id": "s-set",
+                }
+            )
+            assert writer.receive()["status"] == STATUS_OK
+
+        first = ch1.receive()
+        second = ch2.receive()
+    finally:
+        sock1.close()
+        sock2.close()
+
+    assert first["type"] == TYPE_NOTIFICATION
+    assert second["type"] == TYPE_NOTIFICATION
+    assert first["data"]["sede"] == "Central"
+    assert second["data"]["sede"] == "Central"

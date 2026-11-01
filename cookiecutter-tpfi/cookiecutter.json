@@ -2,7 +2,7 @@
     "project_name": "TPFI-PROJECT",
     "package_name": "tpfi",
     "project_description": "TPFI IS2 - Patron Proxy/Singleton/Observer sobre AWS DynamoDB",
-    "author": "Camila Vinegar",
+    "author": "Camila Viñeg",
     "email": "",
     "version": "0.1.0",
     "build_number": "1",

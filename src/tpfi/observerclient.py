@@ -30,6 +30,8 @@ from tpfi.config import (
 )
 from tpfi.protocol import (
     ACTION_SUBSCRIBE,
+    STATUS_ERROR,
+    TYPE_NOTIFICATION,
     InvalidMessageError,
     JsonSocket,
     build_request,
@@ -105,6 +107,12 @@ def build_subscription(client_uuid: str, session_id: str | None = None) -> dict[
 def connect(host: str, port: int) -> JsonSocket:
     """Abre una conexion TCP con el servidor.
 
+    El timeout de ``CONNECTION_TIMEOUT`` se aplica solo al establecimiento de
+    la conexion. Una vez conectado, el socket queda en modo bloqueante porque
+    la escucha es de larga duracion: si se conservara el timeout, cada
+    intervalo de inactividad se interpretaria como una caida y el observador
+    perderia las notificaciones que lleguen durante el reintento.
+
     Args:
         host: Host del servidor.
         port: Puerto del servidor.
@@ -116,22 +124,26 @@ def connect(host: str, port: int) -> JsonSocket:
         OSError: Si no se puede establecer la conexion.
     """
     sock = socket.create_connection((host, port), timeout=CONNECTION_TIMEOUT)
+    sock.settimeout(None)
     return JsonSocket(sock)
 
 
 def emit(message: dict[str, Any], output_path: str | None) -> None:
-    """Muestra ``message`` por stdout o lo agrega al archivo de salida.
+    """Muestra ``message`` por stdout y, si se indico, lo agrega al archivo.
+
+    La consigna exige que cada notificacion se muestre siempre por salida
+    estandar y que ademas se acumule en ``output.json`` cuando se informo
+    ``-o``. Por eso la escritura en archivo no reemplaza a la salida estandar.
 
     Args:
         message: Mensaje recibido del servidor.
         output_path: Archivo donde acumular las notificaciones, o ``None``.
     """
     text = json.dumps(message, ensure_ascii=False, default=str)
-    if output_path is None:
-        print(text)
-        return
-    with open(output_path, "a", encoding="utf-8") as handle:
-        handle.write(text + "\n")
+    print(text)
+    if output_path is not None:
+        with open(output_path, "a", encoding="utf-8") as handle:
+            handle.write(text + "\n")
 
 
 def listen_once(
@@ -142,8 +154,11 @@ def listen_once(
 ) -> None:
     """Mantiene una subscripcion activa hasta que se cae la conexion.
 
-    Conecta, envia la subscripcion y permanece mostrando cada mensaje que llega
-    del servidor. Devuelve (o propaga la excepcion) cuando el socket se cierra.
+    Conecta, envia la subscripcion, consume la confirmacion del servidor y
+    permanece mostrando cada notificacion que llega. Los mensajes que no sean
+    notificaciones se descartan, de modo que la salida solo contiene los
+    cambios de ``CorporateData``. Devuelve (o propaga la excepcion) cuando el
+    socket se cierra.
 
     Args:
         host: Host del servidor.
@@ -153,14 +168,24 @@ def listen_once(
 
     Raises:
         OSError: Si se pierde la conexion durante la escucha.
-        InvalidMessageError: Si el servidor envia un mensaje malformado.
+        InvalidMessageError: Si el servidor envia un mensaje malformado o
+            rechaza la subscripcion.
     """
     channel = connect(host, port)
     logger.info("Conectado a %s:%s como %s", host, port, client_uuid)
     try:
         channel.send(build_subscription(client_uuid))
+        ack = channel.receive()
+        if ack.get("status") == STATUS_ERROR:
+            raise InvalidMessageError(
+                f"El servidor rechazo la subscripcion: {ack.get('error', 'sin detalle')}"
+            )
         while True:
-            emit(channel.receive(), output_path)
+            message = channel.receive()
+            if message.get("type") != TYPE_NOTIFICATION:
+                logger.debug("Mensaje ignorado por no ser notificacion: %s", message.get("type"))
+                continue
+            emit(message, output_path)
     finally:
         channel.close()
 
@@ -188,7 +213,7 @@ def run(
     while True:
         try:
             listen_once(host, port, resolved_uuid, output_path)
-        except (OSError, InvalidMessageError) as err:
+        except OSError as err:
             logger.warning("Conexion perdida (%s); reintentando en %ss", err, retry_interval)
         time.sleep(retry_interval)
 
@@ -209,7 +234,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         stream=sys.stdout,
     )
     logger.info("Iniciando observerclient contra %s:%s", args.host, args.port)
-    return run(args.host, args.port, args.retry_interval, args.output)
+    try:
+        return run(args.host, args.port, args.retry_interval, args.output)
+    except KeyboardInterrupt:
+        logger.info("Observer interrumpido por el usuario")
+        return 0
 
 
 if __name__ == "__main__":

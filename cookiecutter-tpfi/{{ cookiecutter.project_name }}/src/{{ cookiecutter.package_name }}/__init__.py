@@ -12,19 +12,27 @@ import pathlib
 
 __version__ = "{{ cookiecutter.version }}"
 
-_BUILD_FILE = pathlib.Path(__file__).resolve().parents[2] / "BUILD"
+_PACKAGE_DIR = pathlib.Path(__file__).resolve().parent
+_PACKAGE_BUILD_FILE = _PACKAGE_DIR / "BUILD"
+_PROJECT_BUILD_FILE = _PACKAGE_DIR.parents[1] / "BUILD"
 
 
 def get_build() -> str:
     """Devuelve el numero de build registrado en el archivo ``BUILD``.
 
+    Se busca primero dentro del paquete, donde lo instala el wheel mediante
+    ``force-include``, y luego en la raiz del proyecto para el caso de una
+    ejecucion desde el arbol de trabajo.
+
     Returns:
         El contenido de ``BUILD`` sin espacios, o ``"0"`` si no existe.
     """
-    try:
-        return _BUILD_FILE.read_text(encoding="utf-8").strip() or "0"
-    except OSError:
-        return "0"
+    for candidate in (_PACKAGE_BUILD_FILE, _PROJECT_BUILD_FILE):
+        try:
+            return candidate.read_text(encoding="utf-8").strip() or "0"
+        except OSError:
+            continue
+    return "0"
 
 
 __build__ = get_build()

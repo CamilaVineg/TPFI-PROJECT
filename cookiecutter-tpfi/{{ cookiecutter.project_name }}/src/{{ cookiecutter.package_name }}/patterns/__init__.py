@@ -9,8 +9,8 @@ poder verificar su correcto funcionamiento de forma aislada mediante las
 pruebas unitarias.
 """
 
-from tpfi.patterns.iterator import AggregateMixin, AggregateProtocol, IteratorProtocol
-from tpfi.patterns.observer import (
+from {{ cookiecutter.package_name }}.patterns.iterator import AggregateMixin, AggregateProtocol, IteratorProtocol
+from {{ cookiecutter.package_name }}.patterns.observer import (
     ObservedSubject,
     ObserverProtocol,
     SocketDeliveryError,
@@ -18,8 +18,8 @@ from tpfi.patterns.observer import (
     SubjectState,
     close_socket,
 )
-from tpfi.patterns.proxy import ProxyInterface
-from tpfi.patterns.singleton import SingletonABCMeta, singleton
+from {{ cookiecutter.package_name }}.patterns.proxy import ProxyInterface
+from {{ cookiecutter.package_name }}.patterns.singleton import SingletonABCMeta, singleton
 
 __all__ = [
     "AggregateMixin",

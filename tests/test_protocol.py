@@ -9,6 +9,7 @@ import pytest
 from tpfi.protocol import (
     ACTION_GET,
     ACTION_SET,
+    MAX_MESSAGE_SIZE,
     InvalidMessageError,
     JsonSocket,
     build_request,
@@ -151,6 +152,32 @@ def test_json_socket_receive_on_closed_socket() -> None:
             receiver.receive()
     finally:
         right.close()
+
+
+def test_json_socket_rejects_oversized_message() -> None:
+    """Un stream sin terminador no puede crecer mas alla del limite."""
+
+    class FloodSocket:
+        """Socket que entrega datos infinitos sin terminador de linea."""
+
+        def recv(self, size: int) -> bytes:
+            """Devuelve siempre un bloque lleno de datos.
+
+            Args:
+                size: Cantidad de bytes solicitada.
+
+            Returns:
+                Un bloque de ``size`` bytes sin el terminador.
+            """
+            return b"x" * size
+
+    channel = JsonSocket(FloodSocket())  # type: ignore[arg-type]
+
+    with pytest.raises(InvalidMessageError, match="limite"):
+        channel.receive()
+
+    assert len(channel._buffer) == 0
+    assert MAX_MESSAGE_SIZE > 0
 
 
 def test_json_socket_close_tolerates_closed_socket() -> None:

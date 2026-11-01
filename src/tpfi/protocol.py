@@ -35,6 +35,7 @@ __all__ = [
     "TYPE_NOTIFICATION",
     "TYPE_REQUEST",
     "TYPE_RESPONSE",
+    "MAX_MESSAGE_SIZE",
     "InvalidMessageError",
     "JsonSocket",
     "build_request",
@@ -61,6 +62,11 @@ TYPE_NOTIFICATION = "notification"
 MESSAGE_TERMINATOR = "\n"
 _TERMINATOR = MESSAGE_TERMINATOR.encode("utf-8")
 _BUFFER_SIZE = 4096
+
+# Cota de seguridad para el buffer de recepcion. Sin este limite, un par
+# remoto que nunca envia el terminador de linea haria crecer el buffer hasta
+# agotar la memoria del servidor.
+MAX_MESSAGE_SIZE = 1024 * 1024
 
 
 class InvalidMessageError(Exception):
@@ -92,7 +98,10 @@ def decode_message(raw: bytes | str) -> dict[str, Any]:
     Raises:
         InvalidMessageError: Si ``raw`` no contiene un objeto JSON valido.
     """
-    text = raw.decode("utf-8") if isinstance(raw, bytes) else raw
+    try:
+        text = raw.decode("utf-8") if isinstance(raw, bytes) else raw
+    except UnicodeDecodeError as err:
+        raise InvalidMessageError(f"El mensaje no esta codificado en UTF-8: {err}") from err
     text = text.strip()
     if not text:
         raise InvalidMessageError("El mensaje recibido esta vacio")
@@ -227,13 +236,19 @@ class JsonSocket:
         Raises:
             ConnectionError: Si el par remoto cerro la conexion sin enviar un
                 mensaje completo.
-            InvalidMessageError: Si el mensaje recibido no es JSON valido.
+            InvalidMessageError: Si el mensaje recibido no es JSON valido o
+                supera :data:`MAX_MESSAGE_SIZE` bytes sin terminar.
         """
         while _TERMINATOR not in self._buffer:
             chunk = self._sock.recv(_BUFFER_SIZE)
             if not chunk:
                 break
             self._buffer += chunk
+            if len(self._buffer) > MAX_MESSAGE_SIZE:
+                self._buffer = b""
+                raise InvalidMessageError(
+                    f"El mensaje supera el limite de {MAX_MESSAGE_SIZE} bytes"
+                )
         line, _, self._buffer = self._buffer.partition(_TERMINATOR)
         if not line:
             raise ConnectionError("El servidor cerro la conexion")

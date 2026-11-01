@@ -14,9 +14,7 @@ Puede ejecutarse en modo 'mock' (sin necesidad de credenciales AWS) o en modo re
 
 from __future__ import annotations
 
-import argparse
 import json
-import logging
 import socket
 import sys
 import threading
@@ -41,10 +39,10 @@ except ModuleNotFoundError:
     mock_exceptions = MagicMock()
 
     class BotoCoreError(Exception):
-        pass
+        """Error base simulado de botocore."""
 
     class ClientError(Exception):
-        pass
+        """Error simulado devuelto por un cliente de AWS."""
 
     mock_exceptions.BotoCoreError = BotoCoreError
     mock_exceptions.ClientError = ClientError
@@ -60,6 +58,7 @@ class MemoryAuditRepository:
     """Repositorio de auditoria en memoria para demostracion sin AWS."""
 
     def __init__(self) -> None:
+        """Inicializa la lista de entradas de auditoria vacia."""
         self.logs: list[dict[str, Any]] = []
 
     def record(
@@ -70,6 +69,18 @@ class MemoryAuditRepository:
         timestamp: str,
         key: str = "*",
     ) -> dict[str, Any]:
+        """Agrega una entrada de auditoria en memoria.
+
+        Args:
+            action: Accion solicitada por el cliente.
+            client_uuid: UUID de la CPU que origina el requerimiento.
+            session_id: Identificador unico de la sesion.
+            timestamp: Marca de tiempo en formato ISO 8601.
+            key: Identificador del registro afectado o ``"*"`` si no aplica.
+
+        Returns:
+            La entrada de auditoria almacenada.
+        """
         entry = {
             "session_id": session_id,
             "action": action,
@@ -81,6 +92,11 @@ class MemoryAuditRepository:
         return entry
 
     def list(self) -> list[dict[str, Any]]:
+        """Devuelve una copia de todas las entradas de auditoria.
+
+        Returns:
+            La lista de entradas registradas.
+        """
         return list(self.logs)
 
 
@@ -88,6 +104,7 @@ class MemoryDataRepository:
     """Repositorio de datos en memoria para demostracion sin AWS."""
 
     def __init__(self) -> None:
+        """Carga un registro corporativo de ejemplo."""
         self.data: dict[str, dict[str, Any]] = {
             "UADER-FCyT-IS2": {
                 "id": "UADER-FCyT-IS2",
@@ -98,25 +115,53 @@ class MemoryDataRepository:
         }
 
     def get(self, record_id: str) -> dict[str, Any] | None:
+        """Lee un registro por su clave primaria.
+
+        Args:
+            record_id: Clave del registro buscado.
+
+        Returns:
+            Una copia del registro o ``None`` si no existe.
+        """
         item = self.data.get(record_id)
         return dict(item) if item is not None else None
 
     def scan(self) -> Iterator[dict[str, Any]]:
+        """Recorre todos los registros almacenados.
+
+        Yields:
+            Copias de los registros, en el orden del diccionario interno.
+        """
         yield from (dict(v) for v in self.data.values())
 
     def put(self, record_id: str, values: dict[str, Any]) -> dict[str, Any]:
+        """Escribe un registro completo en memoria.
+
+        Args:
+            record_id: Clave primaria del registro.
+            values: Atributos a escribir.
+
+        Returns:
+            El registro almacenado.
+        """
         item = {"id": record_id, **values}
         self.data[record_id] = item
         return item
 
 
 def print_step(title: str) -> None:
+    """Imprime el encabezado de un paso de la demostracion.
+
+    Args:
+        title: Texto que describe el paso.
+    """
     print("\n" + "=" * 70)
     print(f" >>> {title}")
     print("=" * 70)
 
 
 def run_demo() -> None:
+    """Ejecuta la demostracion completa contra repositorios en memoria."""
     print_step("PASO 1: Inicializando Servidor TCP con Patrones Proxy + Singleton + Observer")
     mem_data = MemoryDataRepository()
     mem_audit = MemoryAuditRepository()
@@ -232,4 +277,3 @@ def run_demo() -> None:
 
 if __name__ == "__main__":
     run_demo()
-

@@ -9,9 +9,9 @@ DynamoDB en AWS, con un servidor de aplicaciones TCP y dos clientes.
 
 | Programa | Modulo | Descripcion |
 | --- | --- | --- |
-| `{{ cookiecutter.app_name }}` | `{{ cookiecutter.package_name }}.server` | Servidor TCP: Proxy + Singleton + Observer + auditoria. |
-| `{{ cookiecutter.client_name }}` | `{{ cookiecutter.package_name }}.singleton_client` | Cliente que consulta o modifica `{{ cookiecutter.corporate_table }}`. |
-| `{{ cookiecutter.observer_name }}` | `{{ cookiecutter.package_name }}.observer_client` | Cliente suscripto que recibe notificaciones de cambios. |
+| `{{ cookiecutter.app_name }}` | `{{ cookiecutter.package_name }}.singletonproxyobserver` | Servidor TCP: Proxy + Singleton + Observer + auditoria. |
+| `{{ cookiecutter.client_name }}` | `{{ cookiecutter.package_name }}.singletonclient` | Cliente que consulta o modifica `{{ cookiecutter.corporate_table }}`. |
+| `{{ cookiecutter.observer_name }}` | `{{ cookiecutter.package_name }}.observerclient` | Cliente suscripto que recibe notificaciones de cambios. |
 
 ## Patrones
 

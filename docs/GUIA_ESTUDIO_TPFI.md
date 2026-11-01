@@ -2,7 +2,7 @@
 
 **Materia:** Ingeniería de Software II (UADER - FCyT)  
 **Proyecto:** TPFI-PROJECT (Arquitectura Distribuida con Patrones GoF y AWS DynamoDB)  
-**Autores del Repositorio:** Camila Vinegar, Tadeo Rochas, Abril Poggio  
+**Autores del Repositorio:** Camila Viñeg, Tadeo Rochas, Abril Poggio  
 **Versión:** 0.5.0  
 
 ---

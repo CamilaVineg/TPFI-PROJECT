@@ -19,6 +19,7 @@ import logging
 from typing import Any
 
 from tpfi.collection import CorporateDataCollection
+from tpfi.config import CORPORATE_FIELDS
 from tpfi.patterns.proxy import ProxyInterface
 from tpfi.repository import DataRepository
 
@@ -30,6 +31,9 @@ KEY_ATTRIBUTE = "id"
 
 # Campos que el proxy no permite escribir desde un cliente: son de control.
 RESERVED_FIELDS = frozenset({KEY_ATTRIBUTE})
+
+# Unicos atributos que el cliente puede modificar: los del tuple de la consigna.
+ALLOWED_FIELDS = frozenset(CORPORATE_FIELDS) - RESERVED_FIELDS
 
 
 class InvalidRequestError(Exception):
@@ -91,7 +95,11 @@ class DataProxy(ProxyInterface):
             Todos los registros de la tabla.
         """
         logger.debug("Proxy: list de la tabla completa")
-        return list(self._collection.create_iterator())
+        iterator = self._collection.create_iterator()
+        try:
+            return list(iterator)
+        finally:
+            iterator.close()
 
     def set(self, record_id: str, values: dict[str, Any]) -> dict[str, Any] | None:
         """Valida y resuelve una actualizacion parcial de un registro.
@@ -109,8 +117,9 @@ class DataProxy(ProxyInterface):
 
         Raises:
             InvalidRequestError: Si ``record_id`` es invalido, si ``values``
-                no es un diccionario o si se intenta escribir un campo
-                reservado.
+                no es un diccionario, si se intenta escribir un campo
+                reservado o si se informa un atributo que no pertenece al
+                tuple ``CorporateData``.
         """
         record_id = self._validate_id(record_id)
         if not isinstance(values, dict):
@@ -121,17 +130,16 @@ class DataProxy(ProxyInterface):
             raise InvalidRequestError(
                 f"No se admiten los campos reservados: {', '.join(sorted(forbidden))}"
             )
+        unknown = set(values) - ALLOWED_FIELDS
+        if unknown:
+            raise InvalidRequestError(
+                f"No se admiten los campos ajenos a CorporateData: {', '.join(sorted(unknown))}"
+            )
         if not values:
             raise InvalidRequestError("No se informo ningun campo para modificar")
 
-        current = self._repository.get(record_id)
-        if current is None:
-            logger.info("Proxy: el registro %s no existe, se crea", record_id)
-            merged: dict[str, Any] = dict(values)
-        else:
-            merged = {**current, **values}
-
-        return self._repository.put(record_id, merged)
+        logger.debug("Proxy: set parcial sobre el registro %s", record_id)
+        return self._repository.merge(record_id, values)
 
     @staticmethod
     def _validate_id(record_id: Any) -> str:

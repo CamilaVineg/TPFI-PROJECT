@@ -7,7 +7,7 @@ import threading
 
 import pytest
 
-from tpfi.patterns.singleton import SingletonABCMeta, singleton
+from {{ cookiecutter.package_name }}.patterns.singleton import SingletonABCMeta, singleton
 
 
 class DemoMetaClass(metaclass=SingletonABCMeta):

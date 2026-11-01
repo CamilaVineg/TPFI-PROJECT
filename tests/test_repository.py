@@ -6,13 +6,17 @@ operaciones correctas sin efectuar llamadas reales a AWS.
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 import pytest
 from botocore.exceptions import ClientError
 
+from tpfi.config import CORPORATE_FIELDS
 from tpfi.patterns.singleton import SingletonABCMeta
 from tpfi.repository import AuditRepository, DataRepository, get_cpu_info
+
+_UPDATE_ASSIGNMENT = re.compile(r"(#\d+) = (:\w+|if_not_exists\(#\d+, :null\))")
 
 
 class FakeTable:
@@ -23,6 +27,7 @@ class FakeTable:
         self.items: dict[str, dict[str, Any]] = {}
         self.get_calls: list[dict[str, Any]] = []
         self.put_calls: list[dict[str, Any]] = []
+        self.update_calls: list[dict[str, Any]] = []
         self.scan_calls: list[dict[str, Any]] = []
 
     def get_item(self, Key: dict[str, Any]) -> dict[str, Any]:  # noqa: N803
@@ -51,6 +56,33 @@ class FakeTable:
         """
         self.put_calls.append(Item)
         self.items[Item["id"]] = dict(Item)
+        return {}
+
+    def update_item(self, **kwargs: Any) -> dict[str, Any]:
+        """Simula ``update_item`` con una expresion ``SET`` simple.
+
+        Args:
+            **kwargs: Parametros de ``update_item``. Se interpretan
+                ``UpdateExpression``, ``ExpressionAttributeNames`` y
+                ``ExpressionAttributeValues``.
+
+        Returns:
+            Un diccionario con ``Attributes`` si se pidio ``ALL_NEW``.
+        """
+        self.update_calls.append(kwargs)
+        record_id = kwargs["Key"]["id"]
+        current = dict(self.items.get(record_id, {"id": record_id}))
+        names: dict[str, str] = kwargs["ExpressionAttributeNames"]
+        values: dict[str, Any] = kwargs["ExpressionAttributeValues"]
+        for name_token, value_token in _UPDATE_ASSIGNMENT.findall(kwargs["UpdateExpression"]):
+            field = names[name_token]
+            if value_token.startswith(":"):
+                current[field] = values[value_token]
+            elif field not in current:
+                current[field] = values[":null"]
+        self.items[record_id] = current
+        if kwargs.get("ReturnValues") == "ALL_NEW":
+            return {"Attributes": dict(current)}
         return {}
 
     def scan(self, **kwargs: Any) -> dict[str, Any]:
@@ -203,6 +235,46 @@ def test_put_injects_key_attribute(data_repo: DataRepository) -> None:
     data_repo.put("A", {"sede": "FCyT"})
 
     assert data_repo.get("A") == {"id": "A", "sede": "FCyT"}
+
+
+def test_merge_updates_only_informed_fields(data_repo: DataRepository) -> None:
+    """La actualizacion atomica conserva los campos no informados."""
+    data_repo.put("A", {"id": "A", "sede": "FCyT", "telefono": "111"})
+
+    result = data_repo.merge("A", {"sede": "Central"})
+
+    assert result["id"] == "A"
+    assert result["sede"] == "Central"
+    assert result["telefono"] == "111"
+
+
+def test_merge_creates_missing_record_with_blank_fields(data_repo: DataRepository) -> None:
+    """Un registro nuevo queda con el tuple completo y los omitidos en ``None``."""
+    result = data_repo.merge("B", {"sede": "FQyT"})
+
+    assert result["id"] == "B"
+    assert result["sede"] == "FQyT"
+    assert set(result) == set(CORPORATE_FIELDS)
+    assert result["telefono"] is None
+
+
+def test_merge_is_a_single_atomic_operation(data_repo: DataRepository) -> None:
+    """``merge`` no hace lectura previa ni reemplazo completo del registro."""
+    table = data_repo._table
+    assert isinstance(table, FakeTable)
+
+    data_repo.merge("C", {"sede": "Central"})
+
+    assert table.get_calls == []
+    assert table.put_calls == []
+    assert len(table.update_calls) == 1
+    assert table.update_calls[0]["ReturnValues"] == "ALL_NEW"
+
+
+def test_merge_rejects_fields_outside_the_tuple(data_repo: DataRepository) -> None:
+    """Un campo ajeno al tuple se rechaza antes de llamar a DynamoDB."""
+    with pytest.raises(ValueError, match="ajenos a CorporateData"):
+        data_repo.merge("A", {"campo_inventado": "x"})
 
 
 def test_list_returns_all_items(data_repo: DataRepository) -> None:

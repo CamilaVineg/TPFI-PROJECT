@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 
 from tpfi import singletonclient
-from tpfi.protocol import decode_message, encode_message, make_response
+from tpfi.protocol import decode_message, encode_message, make_error, make_response
 
 
 def test_load_input_reads_object(tmp_path: Path) -> None:
@@ -41,6 +41,50 @@ def test_build_request_from_input_get() -> None:
 
     assert request["action"] == "get"
     assert request["id"] == "x"
+
+
+def test_build_request_from_input_consigna_format() -> None:
+    """El formato de la consigna (claves en mayusculas) tambien se acepta."""
+    request = singletonclient.build_request_from_input(
+        {"UUID": "cpu-1", "ID": "x", "ACTION": "get"}
+    )
+
+    assert request["action"] == "get"
+    assert request["id"] == "x"
+    assert request["client_uuid"] == "cpu-1"
+
+
+def test_build_request_from_input_set_with_root_fields() -> None:
+    """En el formato de la consigna los campos del tuple van al nivel raiz."""
+    request = singletonclient.build_request_from_input(
+        {
+            "UUID": "cpu-1",
+            "ID": "x",
+            "ACTION": "set",
+            "sede": "FCyT",
+            "telefono": "03442 43-1442",
+        }
+    )
+
+    assert request["action"] == "set"
+    assert request["id"] == "x"
+    assert request["data"] == {"sede": "FCyT", "telefono": "03442 43-1442"}
+
+
+def test_build_request_from_input_set_with_nested_data() -> None:
+    """El formato propio mantiene los campos dentro de ``data``."""
+    request = singletonclient.build_request_from_input(
+        {"action": "set", "id": "x", "data": {"sede": "FCyT"}}
+    )
+
+    assert request["data"] == {"sede": "FCyT"}
+
+
+def test_build_request_from_input_is_case_insensitive() -> None:
+    """La accion se admite en mayusculas o en minusculas."""
+    request = singletonclient.build_request_from_input({"ACTION": "LIST"})
+
+    assert request["action"] == "list"
 
 
 def test_build_request_from_input_rejects_unknown_action() -> None:
@@ -98,6 +142,27 @@ def test_main_writes_output(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> 
 
     assert exit_code == 0
     assert json.loads(output_path.read_text(encoding="utf-8"))["status"] == "ok"
+
+
+def test_main_returns_error_when_server_rejects(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Una respuesta ``status=error`` se escribe y hace salir con codigo 1."""
+    input_path = tmp_path / "input.json"
+    output_path = tmp_path / "output.json"
+    input_path.write_text('{"action": "get", "id": "x"}', encoding="utf-8")
+
+    monkeypatch.setattr(
+        singletonclient,
+        "run_request",
+        lambda host, port, request: make_error(request["session_id"], "no existe"),
+    )
+
+    exit_code = singletonclient.main(["-i", str(input_path), "-o", str(output_path)])
+
+    assert exit_code == 1
+    assert json.loads(output_path.read_text(encoding="utf-8"))["status"] == "error"
 
 
 def test_main_returns_error_on_bad_input(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:

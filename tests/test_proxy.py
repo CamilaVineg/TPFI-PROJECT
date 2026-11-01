@@ -12,6 +12,7 @@ from typing import Any
 import pytest
 
 from tpfi.collection import CorporateDataCollection
+from tpfi.config import CORPORATE_FIELDS
 from tpfi.proxy import DataProxy, InvalidRequestError
 
 
@@ -28,6 +29,7 @@ class FakeRepository:
         self.items: dict[str, dict[str, Any]] = dict(initial or {})
         self.get_calls: list[str] = []
         self.put_calls: list[str] = []
+        self.merge_calls: list[tuple[str, dict[str, Any]]] = []
 
     def get(self, record_id: str) -> dict[str, Any] | None:
         """Simula la lectura por clave primaria.
@@ -64,6 +66,27 @@ class FakeRepository:
         item = {"id": record_id, **values}
         self.items[record_id] = item
         return item
+
+    def merge(self, record_id: str, values: dict[str, Any]) -> dict[str, Any]:
+        """Simula la actualizacion atomica de un registro.
+
+        Args:
+            record_id: Clave primaria del registro.
+            values: Campos informados por el cliente.
+
+        Returns:
+            El registro resultante de la actualizacion.
+        """
+        self.merge_calls.append((record_id, dict(values)))
+        current = self.items.get(record_id)
+        if current is None:
+            merged = dict.fromkeys(CORPORATE_FIELDS)
+            merged.update(values)
+            merged["id"] = record_id
+        else:
+            merged = {**current, **values}
+        self.items[record_id] = merged
+        return dict(merged)
 
 
 @pytest.fixture
@@ -124,12 +147,25 @@ def test_get_rejects_non_string_id(proxy: DataProxy) -> None:
 
 
 def test_set_creates_missing_record(proxy: DataProxy) -> None:
-    """Un registro inexistente se crea con los campos informados."""
+    """Un registro inexistente se crea con el tuple completo en blanco."""
     result = proxy.set("NUEVO-1", {"sede": "FCyT"})
 
     assert result is not None
     assert result["id"] == "NUEVO-1"
     assert result["sede"] == "FCyT"
+    assert set(result) == set(CORPORATE_FIELDS)
+    assert result["telefono"] is None
+
+
+def test_set_delegates_to_atomic_merge(proxy: DataProxy, repository: FakeRepository) -> None:
+    """El proxy resuelve el set con una unica operacion atomica."""
+    proxy.set("UADER-FCyT-IS2", {"telefono": "03442 43-1442"})
+
+    assert repository.merge_calls == [
+        ("UADER-FCyT-IS2", {"telefono": "03442 43-1442"}),
+    ]
+    assert repository.get_calls == []
+    assert repository.put_calls == []
 
 
 def test_set_preserves_unspecified_fields(proxy: DataProxy, repository: FakeRepository) -> None:
@@ -160,6 +196,12 @@ def test_set_rejects_reserved_field(proxy: DataProxy) -> None:
     """Intentar escribir el campo reservado ``id`` es un error."""
     with pytest.raises(InvalidRequestError, match="reservados"):
         proxy.set("UADER-FCyT-IS2", {"id": "OTRO"})
+
+
+def test_set_rejects_unknown_field(proxy: DataProxy) -> None:
+    """Un atributo ajeno al tuple ``CorporateData`` se rechaza."""
+    with pytest.raises(InvalidRequestError, match="ajenos a CorporateData"):
+        proxy.set("UADER-FCyT-IS2", {"campo_inventado": "x"})
 
 
 def test_set_rejects_empty_values(proxy: DataProxy) -> None:

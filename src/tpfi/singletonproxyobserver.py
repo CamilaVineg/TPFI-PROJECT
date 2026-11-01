@@ -56,7 +56,10 @@ class ServerHandler(socketserver.BaseRequestHandler):
             logger.warning("Error al recibir requerimiento del cliente: %s", err)
             return
 
-        session_id = str(request.get("session_id") or uuid.uuid4())
+        # El servidor genera siempre la sesion: el identificador recibido del
+        # cliente no se reutiliza, de modo que la auditoria no puede quedar
+        # asociada a una sesion elegida por el solicitante.
+        session_id = str(uuid.uuid4())
         client_uuid = str(request.get("client_uuid") or uuid.getnode())
         action = request.get("action")
         record_id = request.get("id")
@@ -65,7 +68,9 @@ class ServerHandler(socketserver.BaseRequestHandler):
 
         key = record_id if isinstance(record_id, str) and record_id.strip() else "*"
 
-        # 1. Auditoria obligatoria para cada una de las 4 acciones
+        # 1. Auditoria obligatoria para cada una de las 4 acciones. Si no se
+        # puede registrar la pista, la accion no se ejecuta: la consigna exige
+        # que toda accion quede auditada en CorporateLog.
         try:
             self.server.audit_repo.record(
                 action=str(action or "unknown"),
@@ -76,6 +81,12 @@ class ServerHandler(socketserver.BaseRequestHandler):
             )
         except Exception as err:
             logger.error("Error al registrar auditoria para %s: %s", action, err)
+            self._send_error(
+                channel,
+                session_id,
+                f"No se pudo registrar la auditoria: {err}",
+            )
+            return
 
         # 2. Enrutamiento de acciones
         if action == ACTION_GET:
@@ -162,8 +173,9 @@ class ServerHandler(socketserver.BaseRequestHandler):
                 {"subscribed": True, "client_uuid": client_uuid},
             )
             channel.send(response)
-        except (ValueError, OSError) as err:
+        except OSError as err:
             logger.warning("No se pudo suscribir observador %s: %s", client_uuid, err)
+            self.server.subject.unsubscribe(client_uuid, self.request)
             self._send_error(channel, session_id, str(err))
             return
 
@@ -174,7 +186,7 @@ class ServerHandler(socketserver.BaseRequestHandler):
         except (ConnectionError, OSError, InvalidMessageError):
             logger.info("Cliente observador %s desconectado", client_uuid)
         finally:
-            self.server.subject.unsubscribe(client_uuid)
+            self.server.subject.unsubscribe(client_uuid, self.request)
 
     def _safe_send(self, channel: JsonSocket, message: dict[str, Any]) -> None:
         """Envia un mensaje ignorando fallos de red al escribir."""
@@ -191,7 +203,11 @@ class ServerHandler(socketserver.BaseRequestHandler):
 class ApplicationServer(socketserver.ThreadingTCPServer):
     """Servidor TCP multihilo para el TPFI IS2."""
 
-    allow_reuse_address = True
+    # En Windows ``SO_REUSEADDR`` permite que dos procesos escuchen el mismo
+    # puerto, con lo que el caso de aceptacion "levantar dos veces el servidor"
+    # pasaria inadvertido. En POSIX se mantiene activo para poder reiniciar el
+    # servidor mientras el puerto anterior esta en TIME_WAIT.
+    allow_reuse_address = sys.platform != "win32"
     daemon_threads = True
 
     def __init__(

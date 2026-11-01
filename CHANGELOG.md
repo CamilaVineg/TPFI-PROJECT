@@ -11,13 +11,30 @@ y los autores que participaron en el trabajo durante ese periodo.
 
 ## [No publicado]
 
+### Agregado
+
+- `tests/test_acceptance.py`: suite completa de pruebas de aceptacion automatizadas segun la seccion de Validacion y Verificacion de la consigna (camino feliz con impacto en `CorporateData` y `CorporateLog`, argumentos malformados de CLI y archivo, requerimiento sin datos minimos, clientes ante servidor caido y rechazo de doble bind).
+- `tests/test_hypothesis.py`: pruebas basadas en propiedades con `hypothesis` para verificar ida y vuelta de serializacion del protocolo, decodificacion robusta ante bytes arbitrarios, campos de control de requerimiento, generacion de UUID4 y validacion de identificadores y campos del proxy.
+- Soporte en `singletonclient.py` para el formato JSON indicativo de la consigna (`UUID`, `ID` y `ACTION` en mayusculas, con campos del tuple al nivel raiz para `set`), conservando compatibilidad con el formato propio.
+- Operacion atomica `DataRepository.merge()` con `update_item` en DynamoDB, preservando campos previos y rellenando con `None` (NULL) los no informados al crear registros.
+- Asignacion y generacion obligatoria de `session_id` por parte del servidor (`uuid.uuid4()`) para evitar suplantacion o colisiones en la clave primaria de `CorporateLog`.
+- Proteccion contra desbordamiento de memoria en `protocol.JsonSocket.receive()` mediante limite maximo de mensaje (:data:`MAX_MESSAGE_SIZE`).
+- Soporte para multiples conexiones simultaneas de observadores desde un mismo UUID de CPU mediante `SocketObserver` por socket.
+- Manejo limpio de cancelacion manual (`KeyboardInterrupt`) en `observerclient.py` y salida con codigo `1` en `singletonclient.py` cuando el servidor responde `status=error`.
+
+### Corregido
+
+- `demo_runner.py`: correccion de docstrings PEP 257 e importaciones no utilizadas (`F401`, `D101-D107`).
+- `tests/test_singletonproxyobserver.py`: alias de tipo `ServerFixture` para compatibilidad simultanea con `ruff format` y `black`.
+- `observerclient.py`: socket bloqueante (`settimeout(None)`) tras conectar para evitar desconexiones espurias cada 10 segundos, emision simultanea por stdout y archivo, y aislamiento de reintentos exclusivamente para fallas de socket (`OSError`).
+- `proxy.py`: validacion estricta contra atributos ajenos a `CORPORATE_FIELDS` y liberacion explicita del iterador en `list()`.
+- `singletonproxyobserver.py`: desactivacion de `allow_reuse_address` en Windows para impedir que dos instancias escuchen en el mismo puerto, y aborto con error si falla el registro de auditoria.
+- Plantilla `cookiecutter-tpfi`: sincronizacion de todos los modulos faltantes (`collection.py`, `protocol.py`, `proxy.py`, `repository.py`), tests de aceptacion e hipotesis, parametrizados con `{{ cookiecutter.package_name }}`.
+
 ### Pendiente
 
-- Pruebas de aceptacion de los casos exigidos por la consigna: argumentos
-  malformados, requerimiento sin datos minimos, manejo de clientes con el
-  servidor caido y reintento de levantar el servidor dos veces.
-- Pruebas de los patrones con `hypothesis`.
-- Diagramas UML de actividad (proxy) y de estado (observer).
+- Diagramas UML de actividad para proxy y de estado para observer.
+- Informe escrito final del proyecto.
 
 ## [0.5.0] - 2026-10-28
 
@@ -49,7 +66,7 @@ y los autores que participaron en el trabajo durante ese periodo.
 
 ### Autores
 
-- Camila Vinegar
+- Camila Viñeg
 
 ## [0.4.0] - 2026-10-06
 
@@ -117,7 +134,7 @@ y los autores que participaron en el trabajo durante ese periodo.
 
 ### Autores
 
-- Camila Vineg
+- Camila Viñeg
 
 ## [0.1.0] - 2026-09-30
 
@@ -138,4 +155,4 @@ y los autores que participaron en el trabajo durante ese periodo.
 
 ### Autores
 
-- Camila Vineg
+- Camila Viñeg

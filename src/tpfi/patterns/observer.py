@@ -64,13 +64,16 @@ class ObservedSubject:
     """Sujeto que notifica actualizaciones a sus observadores.
 
     La gestion de subscripciones se resuelve con el patron Observer: el sujeto
-    expone ``subscribe`` y ``unsubscribe``, y mantiene un conjunto de sockets
-    persistentes asociados a cada UUID suscripto.
+    expone ``subscribe`` y ``unsubscribe``, y mantiene los sockets persistentes
+    asociados a cada UUID suscripto. Un mismo UUID puede tener varios sockets,
+    porque la consigna admite tantos requerimientos de subscripcion como reciba
+    el servidor (por ejemplo, dos procesos del observador en la misma CPU, que
+    comparten el UUID de ``uuid.getnode()``).
     """
 
     def __init__(self) -> None:
         """Inicializa el sujeto en estado ``IDLE`` y sin observadores."""
-        self._observers: dict[str, socket.socket] = {}
+        self._observers: dict[str, list[SocketObserver]] = {}
         self._lock = threading.Lock()
         self._state = SubjectState.IDLE
 
@@ -82,33 +85,52 @@ class ObservedSubject:
     def subscribe(self, uuid: str, sock: socket.socket) -> None:
         """Registra el socket de ``uuid`` como observador.
 
+        Cada llamada agrega un socket nuevo: no se rechazan las subscripciones
+        repetidas del mismo UUID.
+
         Args:
             uuid: Identificador unico de la CPU del cliente suscripto.
             sock: Socket TCP que permanecera abierto para las notificaciones.
-
-        Raises:
-            ValueError: Si ``uuid`` ya se encuentra subscripto.
         """
+        observer = SocketObserver(sock)
         with self._lock:
-            if uuid in self._observers:
-                raise ValueError(f"El UUID {uuid} ya se encuentra subscripto")
-            self._observers[uuid] = sock
+            self._observers.setdefault(uuid, []).append(observer)
             self._state = SubjectState.SUBSCRIBED
         logger.info("Observador subscripto: %s", uuid)
 
-    def unsubscribe(self, uuid: str) -> None:
-        """Elimina el observador ``uuid`` y cierra su socket.
+    def unsubscribe(self, uuid: str, sock: socket.socket | None = None) -> None:
+        """Elimina uno o todos los observadores de ``uuid``.
 
         Args:
             uuid: Identificador del observador a eliminar.
+            sock: Socket concreto a eliminar. Si se omite se eliminan todos los
+                sockets registrados para ``uuid``.
         """
+        removed: list[SocketObserver] = []
         with self._lock:
-            sock = self._observers.pop(uuid, None)
+            observers = self._observers.get(uuid)
+            if not observers:
+                if not self._observers:
+                    self._state = SubjectState.IDLE
+                return
+            if sock is None:
+                removed = list(observers)
+                del self._observers[uuid]
+            else:
+                for observer in observers:
+                    if observer.sock is sock:
+                        observers.remove(observer)
+                        removed = [observer]
+                        if not observers:
+                            del self._observers[uuid]
+                        break
+                else:
+                    return
             if not self._observers:
-                self._state = SubjectState.DISCONNECTED if sock else SubjectState.IDLE
-        if sock is not None:
-            close_socket(sock)
-            logger.info("Observador desuscripto: %s", uuid)
+                self._state = SubjectState.DISCONNECTED
+        for observer in removed:
+            close_socket(observer.sock)
+        logger.info("Observador desuscripto: %s", uuid)
 
     def notify(self, payload: dict[str, Any]) -> None:
         """Envia ``payload`` a todos los observadores registrados.
@@ -119,32 +141,35 @@ class ObservedSubject:
         Args:
             payload: Registro JSON a retransmitir.
         """
-        message = (json.dumps(payload, default=str) + "\n").encode("utf-8")
         with self._lock:
-            targets = dict(self._observers)
+            targets = [
+                (uuid, observer)
+                for uuid, observers in self._observers.items()
+                for observer in observers
+            ]
 
-        for uuid, sock in targets.items():
+        for uuid, observer in targets:
             try:
-                sock.sendall(message)
+                observer.update(payload)
                 logger.info("Notificacion enviada a %s", uuid)
-            except OSError as err:
+            except SocketDeliveryError as err:
                 logger.warning("Fallo la notificacion a %s: %s", uuid, err)
-                self.unsubscribe(uuid)
+                self.unsubscribe(uuid, observer.sock)
 
     @property
     def subscriber_count(self) -> int:
         """Cantidad de observadores actualmente registrados."""
         with self._lock:
-            return len(self._observers)
+            return sum(len(sockets) for sockets in self._observers.values())
 
     def shutdown(self) -> None:
         """Cierra todos los sockets de observadores y libera el registro."""
         with self._lock:
-            observers = list(self._observers.values())
+            observers = [observer for group in self._observers.values() for observer in group]
             self._observers.clear()
             self._state = SubjectState.DISCONNECTED
-        for sock in observers:
-            close_socket(sock)
+        for observer in observers:
+            close_socket(observer.sock)
 
 
 class SocketObserver:
@@ -162,6 +187,11 @@ class SocketObserver:
         """
         self._sock = sock
 
+    @property
+    def sock(self) -> socket.socket:
+        """Socket asociado al observador."""
+        return self._sock
+
     def update(self, payload: dict[str, Any]) -> None:
         """Envia ``payload`` al cliente suscripto.
 
@@ -172,7 +202,8 @@ class SocketObserver:
             SocketDeliveryError: Si el socket no acepta el envio.
         """
         try:
-            self._sock.sendall(json.dumps(payload, default=str).encode("utf-8"))
+            message = (json.dumps(payload, default=str) + "\n").encode("utf-8")
+            self._sock.sendall(message)
         except OSError as err:
             raise SocketDeliveryError(f"No se pudo entregar la notificacion: {err}") from err
 

@@ -37,6 +37,11 @@ dev = [
 [tool.hatch.build.targets.wheel]
 packages = ["src/{{ cookiecutter.package_name }}"]
 
+# El wheel instala BUILD dentro del paquete para que ``get_build`` lo encuentre
+# tambien cuando el proyecto se ejecuta desde site-packages.
+[tool.hatch.build.targets.wheel.force-include]
+"BUILD" = "{{ cookiecutter.package_name }}/BUILD"
+
 [tool.ruff]
 line-length = 100
 target-version = "py310"

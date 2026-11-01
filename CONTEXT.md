@@ -174,3 +174,47 @@ se corrigio cerrando tambien el origen.
 
 **Resultado:** 163 pruebas en verde con 94,9% de cobertura; `ruff`, `black`,
 `mypy --strict` y `bandit` sin observaciones.
+
+
+### 2026-11-01 - Alineacion con consigna oficial y cierre de defectos P1/P2/P3
+
+**Objetivo:** contrastar la base de codigo contra la consigna oficial del TPFI
+(documento de 9 paginas de la catedra), corregir desalineaciones de
+especificacion y robustecer la suite de pruebas.
+
+- Corregir fallos de formato y linter en demo_runner.py e incompatibilidad de
+  formato entre lack y 
+uff format en 	ests/test_singletonproxyobserver.py.
+- Solucionar desconexion espuria recurrente en observerclient.py asegurando
+  que el socket quede bloqueante tras el handshake inicial (settimeout(None)).
+- Soportar el formato de entrada de requerimientos de la consigna (UUID, ID,
+  ACTION en mayusculas y campos a nivel raiz) en singletonclient.py.
+- Permitir multiples suscripciones de observadores desde un mismo UUID de CPU
+  gestionando los sockets concurrentes de manera independiente en ObservedSubject.
+- Asegurar que ApplicationServer no permita SO_REUSEADDR en plataformas Windows
+  para garantizar la deteccion del fallo al intentar levantar dos servidores.
+- Implementar actualizacion atomica con update_item (DataRepository.merge()),
+  dejando en None (NULL) los campos no informados en registros nuevos y
+  rechazando atributos ajenos al tuple CorporateData.
+- Asignar la creacion del identificador de sesion (session_id) al servidor
+  mediante uuid.uuid4(), y abortar la operacion si falla la auditoria en CorporateLog.
+- Agregar proteccion contra consumo abusivo de memoria en protocol.py (limite
+  de mensaje de 1 MiB).
+- Desarrollar la suite de pruebas de aceptacion 	ests/test_acceptance.py
+  cubriendo los 5 escenarios obligatorios de la consigna con el marker @pytest.mark.acceptance.
+- Desarrollar pruebas unitarias basadas en hipotesis con hypothesis en
+  	ests/test_hypothesis.py.
+- Sincronizar todos los cambios, modulos y suites de prueba dentro de la
+  plantilla cookiecutter-tpfi.
+
+**Correccion relevante:** al intentar levantar dos servidores en Windows, el
+sistema operativo permitia reutilizar el puerto por default con SO_REUSEADDR.
+Se desactivo el flag para sys.platform == 'win32'. Ademas, observerclient
+trataba las excepciones de mensaje invalido como caidas de red y reintentaba
+en bucle; se corrigio para limitar los reintentos a errores OSError de socket
+y atender KeyboardInterrupt limpiamente conforme a la consigna.
+
+**Resultado:** 195 pruebas en verde con 95,03% de cobertura; 
+uff, lack,
+mypy --strict y andit sin observaciones; plantilla Cookiecutter sincronizada
+y verificada.

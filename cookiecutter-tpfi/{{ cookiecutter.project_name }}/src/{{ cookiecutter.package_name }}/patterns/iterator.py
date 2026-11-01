@@ -16,9 +16,9 @@ La estructura sigue el patron GoF adaptada a los iteradores nativos de Python:
 Participante GoF       Implementacion
 =====================  ================================================
 ``Aggregate``          :class:`AggregateMixin`
-``ConcreteAggregate``  :class:`tpfi.collection.CorporateDataCollection`
+``ConcreteAggregate``  :class:`{{ cookiecutter.package_name }}.collection.CorporateDataCollection`
 ``Iterator``           :class:`IteratorProtocol`
-``ConcreteIterator``   :class:`tpfi.collection.RecordIterator`
+``ConcreteIterator``   :class:`{{ cookiecutter.package_name }}.collection.RecordIterator`
 =====================  ================================================
 
 ``CreateIterator()`` equivale a :meth:`AggregateMixin.create_iterator`,

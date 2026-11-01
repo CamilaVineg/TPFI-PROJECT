@@ -20,7 +20,7 @@ from typing import Any
 import boto3
 from botocore.exceptions import BotoCoreError, ClientError
 
-from tpfi.config import CORPORATE_TABLE, LOG_TABLE, get_region
+from tpfi.config import CORPORATE_FIELDS, CORPORATE_TABLE, LOG_TABLE, get_region
 from tpfi.patterns.singleton import SingletonABCMeta
 
 __all__ = ["AuditRepository", "DataRepository", "get_cpu_info"]
@@ -213,6 +213,65 @@ class DataRepository(metaclass=SingletonABCMeta):
             logger.error("Error escribiendo el registro %s: %s", record_id, err)
             raise
         logger.info("Registro %s escrito en %s", record_id, self._table_name)
+        return item
+
+    def merge(self, record_id: str, values: dict[str, Any]) -> dict[str, Any]:
+        """Actualiza un registro de forma atomica dentro de DynamoDB.
+
+        La consigna exige que ``set`` modifique solo los campos informados y
+        conserve el resto. Resolverlo con una lectura seguida de una escritura
+        deja una ventana de carrera: dos clientes concurrentes pueden pisarse
+        los cambios. Esta operacion delega la resolucion en DynamoDB mediante
+        una unica llamada a ``update_item``.
+
+        Para los campos informados se usa ``SET``; para los omitidos se usa
+        ``if_not_exists`` con ``None``, de modo que un registro nuevo queda
+        con el tuple completo y uno existente conserva su valor previo.
+
+        Args:
+            record_id: Clave primaria del registro a actualizar.
+            values: Campos informados por el cliente.
+
+        Returns:
+            El registro resultante tras la actualizacion atomica.
+
+        Raises:
+            ValueError: Si ``values`` contiene atributos ajenos al tuple.
+            BotoCoreError: Si falla la comunicacion con AWS.
+            ClientError: Si AWS rechaza la operacion.
+        """
+        unknown = set(values) - set(CORPORATE_FIELDS)
+        if unknown:
+            raise ValueError(f"Campos ajenos a CorporateData: {', '.join(sorted(unknown))}")
+
+        fields = [field for field in CORPORATE_FIELDS if field != KEY_ATTRIBUTE]
+        names: dict[str, str] = {}
+        expressions: list[str] = []
+        attribute_values: dict[str, Any] = {}
+        for index, field in enumerate(fields):
+            name_placeholder = f"#{index}"
+            names[name_placeholder] = field
+            if field in values:
+                value_placeholder = f":v{index}"
+                expressions.append(f"{name_placeholder} = {value_placeholder}")
+                attribute_values[value_placeholder] = values[field]
+            else:
+                expressions.append(f"{name_placeholder} = if_not_exists({name_placeholder}, :null)")
+        attribute_values[":null"] = None
+
+        try:
+            response = self.table.update_item(
+                Key={KEY_ATTRIBUTE: record_id},
+                UpdateExpression="SET " + ", ".join(expressions),
+                ExpressionAttributeNames=names,
+                ExpressionAttributeValues=attribute_values,
+                ReturnValues="ALL_NEW",
+            )
+        except (BotoCoreError, ClientError) as err:
+            logger.error("Error actualizando el registro %s: %s", record_id, err)
+            raise
+        item: dict[str, Any] = dict(response.get("Attributes", {}))
+        logger.info("Registro %s actualizado en %s", record_id, self._table_name)
         return item
 
 

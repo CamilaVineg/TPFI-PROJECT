@@ -20,11 +20,74 @@ from collections.abc import Sequence
 from typing import Any
 
 from tpfi.config import DEFAULT_HOST, DEFAULT_PORT, tcp_port
-from tpfi.protocol import ACTIONS, InvalidMessageError, JsonSocket, build_request
+from tpfi.protocol import (
+    ACTION_SET,
+    ACTIONS,
+    STATUS_ERROR,
+    InvalidMessageError,
+    JsonSocket,
+    build_request,
+)
 
 logger = logging.getLogger(__name__)
 
 CONNECTION_TIMEOUT = 10.0
+
+# Claves con las que el archivo de entrada puede identificar cada dato. La
+# consigna usa mayusculas (``UUID``, ``ID``, ``ACTION``) y el formato propio del
+# proyecto usa minusculas: se aceptan ambas.
+_ACTION_KEYS = ("ACTION", "action")
+_RECORD_ID_KEYS = ("ID", "id")
+_CLIENT_UUID_KEYS = ("UUID", "uuid", "client_uuid")
+_METADATA_KEYS = frozenset(
+    {
+        "TYPE",
+        "type",
+        "ACTION",
+        "action",
+        "ID",
+        "id",
+        "UUID",
+        "uuid",
+        "CLIENT_UUID",
+        "client_uuid",
+        "SESSION_ID",
+        "session_id",
+        "DATA",
+        "data",
+    }
+)
+
+
+def _first_value(input_data: dict[str, Any], keys: tuple[str, ...]) -> Any:
+    """Devuelve el valor de la primera clave presente en ``input_data``.
+
+    Args:
+        input_data: Requerimiento leido del archivo de entrada.
+        keys: Claves a buscar, en orden de precedencia.
+
+    Returns:
+        El valor encontrado o ``None`` si ninguna clave esta presente.
+    """
+    for key in keys:
+        if key in input_data:
+            return input_data[key]
+    return None
+
+
+def _tuple_fields(input_data: dict[str, Any]) -> dict[str, Any]:
+    """Extrae los campos del tuple ``CorporateData`` del nivel raiz.
+
+    La consigna indica que, para la accion ``set``, los campos del registro se
+    agregan al mismo nivel que ``UUID``, ``ID`` y ``ACTION``.
+
+    Args:
+        input_data: Requerimiento leido del archivo de entrada.
+
+    Returns:
+        Los atributos del tuple informados, sin las claves de control.
+    """
+    return {key: value for key, value in input_data.items() if key not in _METADATA_KEYS}
 
 
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
@@ -99,6 +162,11 @@ def load_input(path: str) -> dict[str, Any]:
 def build_request_from_input(input_data: dict[str, Any]) -> dict[str, Any]:
     """Convierte el requerimiento de entrada en un mensaje de protocolo.
 
+    Acepta tanto el formato de la consigna (``UUID``, ``ID`` y ``ACTION`` en
+    mayusculas, con los campos del tuple al nivel raiz para ``set``) como el
+    formato propio del proyecto (minusculas y los campos dentro de ``data``).
+    La accion se compara sin distinguir mayusculas de minusculas.
+
     Args:
         input_data: Requerimiento leido del archivo de entrada.
 
@@ -108,13 +176,21 @@ def build_request_from_input(input_data: dict[str, Any]) -> dict[str, Any]:
     Raises:
         ValueError: Si la accion no esta entre las admitidas.
     """
-    action = input_data.get("action")
+    action = _first_value(input_data, _ACTION_KEYS)
+    if isinstance(action, str):
+        action = action.lower()
     if action not in ACTIONS:
         raise ValueError(f"Accion no admitida: {action!r}")
+
+    data: Any = None
+    if action == ACTION_SET:
+        data = input_data["data"] if "data" in input_data else _tuple_fields(input_data)
+
     return build_request(
         action,
-        record_id=input_data.get("id"),
-        data=input_data.get("data"),
+        record_id=_first_value(input_data, _RECORD_ID_KEYS),
+        data=data,
+        client_uuid=_first_value(input_data, _CLIENT_UUID_KEYS),
     )
 
 
@@ -161,7 +237,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         argv: Argumentos de linea de comandos.
 
     Returns:
-        El codigo de salida del proceso (``0`` si fue exitoso, ``1`` ante error).
+        El codigo de salida del proceso: ``0`` si el servidor respondio ``ok``
+        y ``1`` si fallo la comunicacion o la respuesta trae ``status=error``.
     """
     args = parse_args(argv)
     logging.basicConfig(
@@ -179,7 +256,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         logger.error("Fallo el requerimiento: %s", err)
         return 1
     write_output(args.output, response)
-    return 0
+    return 1 if response.get("status") == STATUS_ERROR else 0
 
 
 if __name__ == "__main__":
