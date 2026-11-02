@@ -148,6 +148,21 @@ class MemoryDataRepository:
         self.data[record_id] = item
         return item
 
+    def merge(self, record_id: str, values: dict[str, Any]) -> dict[str, Any]:
+        """Actualiza un registro conservando los atributos previos en memoria.
+
+        Args:
+            record_id: Clave primaria del registro.
+            values: Atributos a modificar o agregar.
+
+        Returns:
+            El registro resultante tras la actualizacion.
+        """
+        current = self.data.get(record_id, {"id": record_id})
+        updated = {**current, **values}
+        self.data[record_id] = updated
+        return dict(updated)
+
 
 def print_step(title: str) -> None:
     """Imprime el encabezado de un paso de la demostracion.
@@ -203,6 +218,8 @@ def run_demo() -> None:
             notif = obs_channel.receive()
             print("\n[!] >>> NOTIFICACION EN CASCADA RECIBIDA POR ObserverClient! <<<")
             print(json.dumps(notif, indent=2))
+        except (OSError, ConnectionResetError):
+            pass
         except Exception as e:
             print("[Observer error]:", e)
 
