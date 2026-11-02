@@ -49,6 +49,7 @@ class ServerHandler(socketserver.BaseRequestHandler):
 
     def handle(self) -> None:
         """Atiende la conexion de un cliente."""
+        # 1. Enmarcado y deserialización JSON mediante JsonSocket (delimitación por '\n')
         channel = JsonSocket(self.request)
         try:
             request = channel.receive()
@@ -56,9 +57,9 @@ class ServerHandler(socketserver.BaseRequestHandler):
             logger.warning("Error al recibir requerimiento del cliente: %s", err)
             return
 
-        # El servidor genera siempre la sesion: el identificador recibido del
-        # cliente no se reutiliza, de modo que la auditoria no puede quedar
-        # asociada a una sesion elegida por el solicitante.
+        # 2. Generación autoritativa de sesión en el servidor:
+        # El identificador recibido del cliente no se reutiliza para evitar suplantaciones
+        # en la clave primaria de CorporateLog.
         session_id = str(uuid.uuid4())
         client_uuid = str(request.get("client_uuid") or uuid.getnode())
         action = request.get("action")
@@ -68,9 +69,9 @@ class ServerHandler(socketserver.BaseRequestHandler):
 
         key = record_id if isinstance(record_id, str) and record_id.strip() else "*"
 
-        # 1. Auditoria obligatoria para cada una de las 4 acciones. Si no se
-        # puede registrar la pista, la accion no se ejecuta: la consigna exige
-        # que toda accion quede auditada en CorporateLog.
+        # 3. Pista de auditoría previa obligatoria en CorporateLog (Patrón Singleton):
+        # La consigna exige que toda acción quede registrada antes de ser procesada.
+        # Si la auditoría falla, la operación se cancela inmediatamente.
         try:
             self.server.audit_repo.record(
                 action=str(action or "unknown"),
@@ -88,14 +89,16 @@ class ServerHandler(socketserver.BaseRequestHandler):
             )
             return
 
-        # 2. Enrutamiento de acciones
+        # 4. Despacho y enrutamiento de la acción solicitada
         if action == ACTION_GET:
             self._handle_get(channel, session_id, record_id)
         elif action == ACTION_LIST:
             self._handle_list(channel, session_id)
         elif action == ACTION_SET:
+            # Acción mutadora: dispara validación en Proxy y posterior notificación en cascada
             self._handle_set(channel, session_id, record_id, data)
         elif action == ACTION_SUBSCRIBE:
+            # Suscripción reactiva: mantiene el canal TCP abierto para el patrón Observer
             self._handle_subscribe(channel, session_id, client_uuid)
         else:
             self._send_error(channel, session_id, f"Accion invalida: {action!r}")
@@ -105,6 +108,7 @@ class ServerHandler(socketserver.BaseRequestHandler):
         try:
             if not isinstance(record_id, str):
                 raise InvalidRequestError("El identificador del registro es obligatorio para get")
+            # Consulta intermediada por el Proxy (valida y delega en DataRepository)
             record = self.server.proxy.get(record_id)
             if record is None:
                 response = make_error(session_id, f"El registro '{record_id}' no existe")
@@ -120,6 +124,7 @@ class ServerHandler(socketserver.BaseRequestHandler):
     def _handle_list(self, channel: JsonSocket, session_id: str) -> None:
         """Procesa una accion 'list'."""
         try:
+            # Consulta resuelta mediante el patrón Iterator (paginación multietapa de DynamoDB)
             items = self.server.proxy.list()
             response = make_response(session_id, items)
         except Exception as err:
@@ -141,11 +146,13 @@ class ServerHandler(socketserver.BaseRequestHandler):
             if not isinstance(data, dict):
                 raise InvalidRequestError("El atributo 'data' debe ser un objeto JSON")
 
+            # 1. El Proxy valida y ejecuta la actualización atómica en DynamoDB
             updated = self.server.proxy.set(record_id, data)
             response = make_response(session_id, updated)
             self._safe_send(channel, response)
 
-            # Notificacion en cascada a observadores si la actualizacion fue exitosa
+            # 2. Notificación en cascada: el Sujeto Observer retransmite el evento a todos los
+            # ObserverClient conectados simultáneamente
             if updated is not None:
                 notification = make_notification(session_id, updated)
                 self.server.subject.notify(notification)
@@ -167,6 +174,7 @@ class ServerHandler(socketserver.BaseRequestHandler):
             if not isinstance(self.request, socket.socket):
                 self._send_error(channel, session_id, "Tipo de socket no valido")
                 return
+            # Registra el socket en el Sujeto Observable para futuras difusiones
             self.server.subject.subscribe(client_uuid, self.request)
             response = make_response(
                 session_id,
@@ -179,13 +187,15 @@ class ServerHandler(socketserver.BaseRequestHandler):
             self._send_error(channel, session_id, str(err))
             return
 
-        # Mantener el socket del observador abierto hasta desconexion
+        # Ciclo de vida persistente: a diferencia de las consultas transaccionales,
+        # la suscripción mantiene el hilo y socket abiertos hasta que el cliente se desconecte.
         try:
             while True:
                 _ = channel.receive()
         except (ConnectionError, OSError, InvalidMessageError):
             logger.info("Cliente observador %s desconectado", client_uuid)
         finally:
+            # Desuscripción y limpieza automática al cerrar la conexión
             self.server.subject.unsubscribe(client_uuid, self.request)
 
     def _safe_send(self, channel: JsonSocket, message: dict[str, Any]) -> None:

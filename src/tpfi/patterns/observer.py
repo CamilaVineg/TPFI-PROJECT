@@ -73,7 +73,9 @@ class ObservedSubject:
 
     def __init__(self) -> None:
         """Inicializa el sujeto en estado ``IDLE`` y sin observadores."""
+        # Mapeo client_uuid -> lista de SocketObserver (conexiones concurrentes)
         self._observers: dict[str, list[SocketObserver]] = {}
+        # Cerrojo de exclusión mutua para proteger el registro entre hilos
         self._lock = threading.Lock()
         self._state = SubjectState.IDLE
 
@@ -92,8 +94,10 @@ class ObservedSubject:
             uuid: Identificador unico de la CPU del cliente suscripto.
             sock: Socket TCP que permanecera abierto para las notificaciones.
         """
+        # Encapsula el socket del cliente en un observador concreto (SocketObserver)
         observer = SocketObserver(sock)
         with self._lock:
+            # Sincronización thread-safe: se añade el nuevo observador a la lista del UUID
             self._observers.setdefault(uuid, []).append(observer)
             self._state = SubjectState.SUBSCRIBED
         logger.info("Observador subscripto: %s", uuid)
@@ -128,6 +132,7 @@ class ObservedSubject:
                     return
             if not self._observers:
                 self._state = SubjectState.DISCONNECTED
+        # El cierre de sockets se realiza fuera del cerrojo para no trabar otros hilos
         for observer in removed:
             close_socket(observer.sock)
         logger.info("Observador desuscripto: %s", uuid)
@@ -142,17 +147,23 @@ class ObservedSubject:
             payload: Registro JSON a retransmitir.
         """
         with self._lock:
+            # Snapshot Isolation (Copia instantánea):
+            # Se clona la lista de observadores bajo lock para no retener el cerrojo
+            # durante la transmisión por red, evitando deadlocks.
             targets = [
                 (uuid, observer)
                 for uuid, observers in self._observers.items()
                 for observer in observers
             ]
 
+        # Emisión en cascada sin retener el lock del sujeto
         for uuid, observer in targets:
             try:
                 observer.update(payload)
                 logger.info("Notificacion enviada a %s", uuid)
             except SocketDeliveryError as err:
+                # Poda automática (Auto-pruning): si un cliente se desconectó o falló la red,
+                # se desuscribe para evitar acumular sockets zombis en el servidor.
                 logger.warning("Fallo la notificacion a %s: %s", uuid, err)
                 self.unsubscribe(uuid, observer.sock)
 
@@ -202,6 +213,7 @@ class SocketObserver:
             SocketDeliveryError: Si el socket no acepta el envio.
         """
         try:
+            # Encuadre de línea JSON con delimitador '\n' exigido por el protocolo TCP
             message = (json.dumps(payload, default=str) + "\n").encode("utf-8")
             self._sock.sendall(message)
         except OSError as err:

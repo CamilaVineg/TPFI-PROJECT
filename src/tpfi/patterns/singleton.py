@@ -34,7 +34,9 @@ class SingletonABCMeta(abc.ABCMeta):
     desde hilos distintos.
     """
 
+    # Diccionario estático que almacena la instancia única para cada clase concreta.
     _instances: ClassVar[dict[type, Any]] = {}
+    # Cerrojo de sincronización para garantizar thread-safety en entornos concurrentes.
     _lock: ClassVar[threading.Lock] = threading.Lock()
 
     def __call__(cls, *args: Any, **kwargs: Any) -> Any:
@@ -47,8 +49,12 @@ class SingletonABCMeta(abc.ABCMeta):
         Returns:
             La unica instancia de la clase.
         """
+        # Patrón Double-Checked Locking (Doble Verificación):
+        # 1. Comprobación rápida sin lock para no penalizar lecturas concurrentes frecuentes.
         if cls not in SingletonABCMeta._instances:
+            # 2. Adquisición del cerrojo para serializar la instanciación en entornos multihilo.
             with SingletonABCMeta._lock:
+                # 3. Segunda comprobación por si otro hilo creó la instancia mientras se esperaba.
                 if cls not in SingletonABCMeta._instances:
                     SingletonABCMeta._instances[cls] = super().__call__(*args, **kwargs)
         return SingletonABCMeta._instances[cls]
@@ -84,6 +90,7 @@ def singleton(cls: Callable[..., T]) -> Callable[..., T]:
 
     @functools.wraps(cls)
     def get_instance(*args: Any, **kwargs: Any) -> T:
+        # Doble verificación thread-safe en el decorador funcional
         if class_key not in instances:
             with lock:
                 if class_key not in instances:

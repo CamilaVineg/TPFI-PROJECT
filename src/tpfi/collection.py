@@ -84,6 +84,8 @@ class RecordIterator:
         Raises:
             StopIteration: Cuando no quedan registros por recorrer.
         """
+        # Evaluación perezosa (Lazy evaluation):
+        # La fuente se inicializa en la primera llamada a next().
         stream = self._stream
         if stream is None:
             stream = iter(self._ordered())
@@ -121,6 +123,8 @@ class RecordIterator:
         como la fuente, porque una expresion generadora no cierra por si sola
         el iterable del que se alimenta.
         """
+        # Liberación determinista de recursos: se cierran explícitamente tanto el generador
+        # de filtrado como el generador subyacente de DynamoDB, evitando fugas de sockets.
         stream = self._stream
         if isinstance(stream, Generator):
             stream.close()
@@ -194,4 +198,6 @@ class CorporateDataCollection(AggregateMixin[dict[str, Any]]):
             Un iterador independiente sobre la coleccion, que pide cada pagina
             de DynamoDB recien cuando la anterior se agota.
         """
+        # Método fábrica del patrón Iterator (GoF):
+        # Desacopla al consumidor devolviendo una instancia fresca del iterador concreto.
         return RecordIterator(self._repository.scan(), filters=filters, sort_by=sort_by)

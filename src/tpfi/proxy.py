@@ -55,7 +55,9 @@ class DataProxy(ProxyInterface):
                 instancia unica de :class:`~tpfi.repository.DataRepository`,
                 que es el comportamiento esperado en el servidor.
         """
+        # Si no se inyecta repositorio, se obtiene la instancia Singleton por defecto
         self._repository = repository if repository is not None else DataRepository()
+        # Se vincula la colección para resolver el patrón Iterator en operaciones de listado
         self._collection = CorporateDataCollection(self._repository)
 
     @property
@@ -80,8 +82,10 @@ class DataProxy(ProxyInterface):
         Raises:
             InvalidRequestError: Si ``record_id`` viene vacio o no es texto.
         """
+        # Intercepción y validación de entrada antes de acceder a la base física
         record_id = self._validate_id(record_id)
         logger.debug("Proxy: get sobre el registro %s", record_id)
+        # Delegación hacia el repositorio físico (DataRepository)
         return self._repository.get(record_id)
 
     def list(self) -> list[dict[str, Any]]:
@@ -95,10 +99,13 @@ class DataProxy(ProxyInterface):
             Todos los registros de la tabla.
         """
         logger.debug("Proxy: list de la tabla completa")
+        # El Proxy solicita el Iterator a la colección, abstrayendo el mecanismo de paginación
         iterator = self._collection.create_iterator()
         try:
+            # Materialización en memoria para la construcción del mensaje único de respuesta JSON
             return list(iterator)
         finally:
+            # Garantía de liberación de recursos: cierra el generador de DynamoDB
             iterator.close()
 
     def set(self, record_id: str, values: dict[str, Any]) -> dict[str, Any] | None:
@@ -121,23 +128,30 @@ class DataProxy(ProxyInterface):
                 reservado o si se informa un atributo que no pertenece al
                 tuple ``CorporateData``.
         """
+        # 1. Validación de la clave primaria (no puede ser vacía ni de tipo no string)
         record_id = self._validate_id(record_id)
         if not isinstance(values, dict):
             raise InvalidRequestError("El conjunto de campos a escribir debe ser un objeto JSON")
 
+        # 2. Protección de integridad: no se permite alterar la clave primaria mediante 'data'
         forbidden = RESERVED_FIELDS.intersection(values)
         if forbidden:
             raise InvalidRequestError(
                 f"No se admiten los campos reservados: {', '.join(sorted(forbidden))}"
             )
+
+        # 3. Validación de esquema: rechazo de campos ajenos al tuple corporativo oficial
         unknown = set(values) - ALLOWED_FIELDS
         if unknown:
             raise InvalidRequestError(
                 f"No se admiten los campos ajenos a CorporateData: {', '.join(sorted(unknown))}"
             )
+
+        # 4. Control de contenido: se exige al menos un atributo a modificar
         if not values:
             raise InvalidRequestError("No se informo ningun campo para modificar")
 
+        # 5. Delegación física atómica hacia el repositorio Singleton
         logger.debug("Proxy: set parcial sobre el registro %s", record_id)
         return self._repository.merge(record_id, values)
 
