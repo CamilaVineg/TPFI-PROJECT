@@ -182,39 +182,50 @@ se corrigio cerrando tambien el origen.
 (documento de 9 paginas de la catedra), corregir desalineaciones de
 especificacion y robustecer la suite de pruebas.
 
-- Corregir fallos de formato y linter en demo_runner.py e incompatibilidad de
-  formato entre lack y 
-uff format en 	ests/test_singletonproxyobserver.py.
-- Solucionar desconexion espuria recurrente en observerclient.py asegurando
-  que el socket quede bloqueante tras el handshake inicial (settimeout(None)).
-- Soportar el formato de entrada de requerimientos de la consigna (UUID, ID,
-  ACTION en mayusculas y campos a nivel raiz) en singletonclient.py.
+- Corregir fallos de formato y linter en `demo_runner.py` e incompatibilidad de
+  formato entre `black` y `ruff format` en `tests/test_singletonproxyobserver.py`.
+- Solucionar desconexion espuria recurrente en `observerclient.py` asegurando
+  que el socket quede bloqueante tras el handshake inicial (`settimeout(None)`).
+- Soportar el formato de entrada de requerimientos de la consigna (`UUID`, `ID`,
+  `ACTION` en mayusculas y campos a nivel raiz) en `singletonclient.py`.
 - Permitir multiples suscripciones de observadores desde un mismo UUID de CPU
-  gestionando los sockets concurrentes de manera independiente en ObservedSubject.
-- Asegurar que ApplicationServer no permita SO_REUSEADDR en plataformas Windows
+  gestionando los sockets concurrentes de manera independiente en `ObservedSubject`.
+- Asegurar que `ApplicationServer` no permita `SO_REUSEADDR` en plataformas Windows
   para garantizar la deteccion del fallo al intentar levantar dos servidores.
-- Implementar actualizacion atomica con update_item (DataRepository.merge()),
-  dejando en None (NULL) los campos no informados en registros nuevos y
-  rechazando atributos ajenos al tuple CorporateData.
-- Asignar la creacion del identificador de sesion (session_id) al servidor
-  mediante uuid.uuid4(), y abortar la operacion si falla la auditoria en CorporateLog.
-- Agregar proteccion contra consumo abusivo de memoria en protocol.py (limite
+- Implementar actualizacion atomica con `update_item` (`DataRepository.merge()`),
+  dejando en `None` (NULL) los campos no informados en registros nuevos y
+  rechazando atributos ajenos al tuple `CorporateData`.
+- Asignar la creacion del identificador de sesion (`session_id`) al servidor
+  mediante `uuid.uuid4()`, y abortar la operacion si falla la auditoria en `CorporateLog`.
+- Agregar proteccion contra consumo abusivo de memoria en `protocol.py` (limite
   de mensaje de 1 MiB).
-- Desarrollar la suite de pruebas de aceptacion 	ests/test_acceptance.py
-  cubriendo los 5 escenarios obligatorios de la consigna con el marker @pytest.mark.acceptance.
-- Desarrollar pruebas unitarias basadas en hipotesis con hypothesis en
-  	ests/test_hypothesis.py.
+- Desarrollar la suite de pruebas de aceptacion `tests/test_acceptance.py`
+  cubriendo los 5 escenarios obligatorios de la consigna con el marker `@pytest.mark.acceptance`.
+- Desarrollar pruebas unitarias basadas en hipotesis con `hypothesis` en
+  `tests/test_hypothesis.py`.
 - Sincronizar todos los cambios, modulos y suites de prueba dentro de la
-  plantilla cookiecutter-tpfi.
+  plantilla `cookiecutter-tpfi`.
 
 **Correccion relevante:** al intentar levantar dos servidores en Windows, el
-sistema operativo permitia reutilizar el puerto por default con SO_REUSEADDR.
-Se desactivo el flag para sys.platform == 'win32'. Ademas, observerclient
+sistema operativo permitia reutilizar el puerto por default con `SO_REUSEADDR`.
+Se desactivo el flag para `sys.platform == 'win32'`. Ademas, `observerclient`
 trataba las excepciones de mensaje invalido como caidas de red y reintentaba
-en bucle; se corrigio para limitar los reintentos a errores OSError de socket
-y atender KeyboardInterrupt limpiamente conforme a la consigna.
+en bucle; se corrigio para limitar los reintentos a errores `OSError` de socket
+y atender `KeyboardInterrupt` limpiamente conforme a la consigna.
 
-**Resultado:** 195 pruebas en verde con 95,03% de cobertura; 
-uff, lack,
-mypy --strict y andit sin observaciones; plantilla Cookiecutter sincronizada
+**Resultado:** 195 pruebas en verde con 95,03% de cobertura; `ruff`, `black`,
+`mypy --strict` y `bandit` sin observaciones; plantilla Cookiecutter sincronizada
 y verificada.
+
+
+### 2026-11-01 - Entorno de pruebas en vivo, protocolo de integracion y guia de estudio
+
+**Objetivo:** preparar el banco de datos de prueba, el entorno de ejecucion en vivo, la documentacion tecnica y el plan de demostracion para la defensa oral del sistema distribuido.
+
+- Crear el juego de datos de prueba en `samples/` (`input_get.json`, `input_set.json`, `input_list.json`, `input_invalido.json`) para ensayar repetiblemente cada accion del protocolo y la validacion de integridad del Proxy.
+- Desarrollar `demo_runner.py` con repositorios en memoria (`MemoryDataRepository`, `MemoryAuditRepository`) y dobles defensivos para emular el ciclo completo distribuido (servidor multihilo, observador y cliente de transacciones con auditoria) de forma autonoma y offline.
+- Elaborar `COMANDOS_DEFENSA.txt` con el protocolo formal de ejecucion en 3 terminales, detallando roles, flujos de red, argumentos y pruebas de regresion y linters para la proyeccion en el examen oral.
+- Redactar `docs/GUIA_ESTUDIO_TPFI.md` y `docs/GUIA_ESTUDIO_TPFI.html` con la especificacion exhaustiva de la arquitectura, patrones GoF, esquema de DynamoDB, protocolo de sockets y banco de preguntas de examen oral, junto con el script de compilacion `generate_pdf.py` para generar `docs/GUIA_ESTUDIO_TPFI.pdf`.
+- Configurar la persistencia de entorno y resolucion de modulos en Windows para ejecucion transparente en terminales PowerShell.
+
+**Resultado:** protocolo de defensa en vivo, guia de estudio y muestras de prueba 100% operativos y sincronizados con la suite de aceptacion.

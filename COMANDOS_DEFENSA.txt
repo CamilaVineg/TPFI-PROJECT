@@ -1,0 +1,192 @@
+================================================================================
+TPFI - INGENIERIA DE SOFTWARE II (UADER-FCyT)
+PLAN DE EJECUCION Y PRUEBAS DE INTEGRACION DEL SISTEMA
+================================================================================
+Proyecto:     TPFI-PROJECT (Proxy, Singleton, Observer, Iterator)
+Arquitectura: Servidor TCP Multihilo y Clientes Distribuidos sobre DynamoDB
+Version:      0.5.0
+================================================================================
+
+
+1. CONFIGURACION Y ACTIVACION DEL ENTORNO
+--------------------------------------------------------------------------------
+Objetivo:
+  Inicializar el entorno virtual de Python y cargar las dependencias de ejecucion
+  y desarrollo registradas en pyproject.toml.
+
+Comandos (PowerShell):
+  python -m venv .venv
+  .\.venv\Scripts\Activate.ps1
+  pip install -e ".[dev]"
+
+Notas tecnicas:
+  - 'pip install -e .[dev]' compila los entry points del sistema en el entorno,
+    habilitando la ejecucion directa de los ejecutables 'singletonproxyobserver',
+    'singletonclient' y 'observerclient'.
+
+
+2. SUITE DE PRUEBAS AUTOMATIZADAS Y CONTROL DE CALIDAD
+--------------------------------------------------------------------------------
+Objetivo:
+  Validar la integridad de los contratos de software, cobertura de codigo y
+  analisis estatico de tipos y vulnerabilidades.
+
+2.1 Ejecucion de pruebas unitarias e integrales con informe de cobertura:
+  pytest
+
+  Descripcion tecnica:
+    Ejecuta los 195 casos de prueba implementados en el directorio 'tests/' (incluyendo
+    pruebas unitarias, pruebas basadas en propiedades con Hypothesis y la suite de
+    aceptacion formal exigida por la catedra).
+    Emplea dobles de prueba (test doubles) para simular sockets TCP y las llamadas
+    a AWS DynamoDB, validando el comportamiento bajo concurrencia, metaclases
+    Singleton, logica del Proxy, estados del Observer y paginacion del Iterator.
+    Umbral de cobertura requerido: >= 85% (Cobertura alcanzada: > 95%).
+
+2.2 Verificacion estatica de codigo y linters:
+  ruff check .
+  black --check .
+  mypy
+  bandit -r src
+
+  Descripcion tecnica:
+    - ruff / black: Validacion de convenciones de estilo segun PEP 8.
+    - mypy: Comprobacion estricta de tipado estatico en la capa src/tpfi/.
+    - bandit: Analisis estatico de seguridad en busqueda de vulnerabilidades.
+
+
+3. PROTOCOLO DE PRUEBAS DE INTEGRACION EN VIVO (3 TERMINALES)
+--------------------------------------------------------------------------------
+Precondicion:
+  Disponer de 3 instancias de consola abiertas en la raiz del proyecto con el
+  entorno virtual activo (.venv).
+
+
+--------------------------------------------------------------------------------
+3.1 TERMINAL 1: SERVIDOR DE APLICACIONES (SingletonProxyObserverTPFI)
+--------------------------------------------------------------------------------
+Objetivo:
+  Poner en linea el demonio TCP multihilo para recepcion y despacho de peticiones.
+
+Comando:
+  singletonproxyobserver -p=8080 -v
+
+Parametros:
+  -p=8080 : Puerto TCP de enlace (ApplicationServer / ThreadingTCPServer).
+  -v      : Habilita el registro detallado (DEBUG) en stdout.
+
+Mecanismos internos:
+  - Instanciacion perezosa (lazy) de los repositorios Singleton (DataRepository y
+    AuditRepository) garantizando un unico canal fisico hacia DynamoDB.
+  - El servidor atiende cada conexion entrante en un hilo independiente (thread),
+    asegurando no bloqueo ante clientes persistentes (observadores).
+  - Cada solicitud entrante genera un registro obligatorio en la tabla
+    CorporateLog con marca temporal UTC e identificador de hardware del cliente.
+
+
+--------------------------------------------------------------------------------
+3.2 TERMINAL 2: CLIENTE DE NOTIFICACIONES (ObserverClient)
+--------------------------------------------------------------------------------
+Objetivo:
+  Registrar un suscriptor persistente para recibir cambios de datos en tiempo real.
+
+Comando:
+  observerclient -s=localhost -p=8080 -v
+
+Parametros:
+  -s=localhost : Direccion del host donde corre el servidor de aplicaciones.
+  -p=8080      : Puerto TCP del servicio.
+  -v           : Muestra las tramas de red recibidas.
+
+Mecanismos internos:
+  - Obtiene el identificador de la CPU local mediante uuid.getnode().
+  - Transmite el mensaje 'subscribe' estructurado en JSON delimitado por '\n'.
+  - El socket TCP permanece en estado de escucha activa.
+  - Dispone de logica de reintento automatico (retry_interval=30s) ante caidas
+    o cortes transitorios en el enlace de red.
+
+
+--------------------------------------------------------------------------------
+3.3 TERMINAL 3: CLIENTE DE OPERACIONES TRANSACCIONALES (SingletonClient)
+--------------------------------------------------------------------------------
+Objetivo:
+  Ejecutar operaciones de lectura, escritura, recorrido y validacion de integridad.
+
+--- Caso 3.3.1: Consulta puntual por clave primaria (Accion 'get') ---
+Comando:
+  singletonclient -i "samples/input_get.json" -v
+
+Comportamiento:
+  1. Envia peticion con id='UADER-FCyT-IS2'.
+  2. DataProxy valida la existencia de la clave primaria.
+  3. DataRepository ejecuta la operacion get_item sobre DynamoDB.
+  4. La transaccion se registra en CorporateLog.
+  5. Retorna la entidad en formato JSON con status 'ok'.
+
+
+--- Caso 3.3.2: Actualizacion parcial y notificacion en cascada (Accion 'set') ---
+Comando:
+  singletonclient -i "samples/input_set.json" -v
+
+Comportamiento:
+  1. Envia nuevos valores para los atributos 'telefono' y 'web'.
+  2. DataProxy intercepta el requerimiento y realiza la actualizacion parcial:
+     conserva los atributos previos existentes en base ('sede', 'provincia', etc.)
+     y fusiona los campos informados.
+  3. DataRepository persiste la entidad actualizada en CorporateData.
+  4. Al concluir la transaccion con exito, el servidor emite una notificacion en
+     cascada mediante ObservedSubject.notify().
+  5. Resultado observable: Terminal 2 (ObserverClient) recibe en tiempo real
+     la trama JSON con los datos actualizados del registro.
+
+
+--- Caso 3.3.3: Listado completo y paginacion de DynamoDB (Accion 'list') ---
+Comando:
+  singletonclient -i "samples/input_list.json" -v
+
+Comportamiento:
+  1. Solicita la totalidad de los registros de la tabla CorporateData.
+  2. Patron Iterator: CorporateDataCollection (Agregado) crea un RecordIterator.
+  3. DynamoDB posee un limite fisico de 1 MB por llamada a scan(); el iterador
+     recorre la tabla pagina por pagina siguiendo 'LastEvaluatedKey' de forma
+     perezosa (lazy evaluation), evitando truncamientos de datos o saturacion
+     de memoria.
+
+
+--- Caso 3.3.4: Control de integridad y rechazo de campos reservados ---
+Comando:
+  singletonclient -i "samples/input_invalido.json" -v
+
+Comportamiento:
+  1. El archivo contiene un intento de alteracion de la clave primaria ('id').
+  2. DataProxy detecta la violacion de integridad antes de contactar a DynamoDB.
+  3. Retorna un mensaje de error formal (status 'error'), protegiendo la base de
+     datos de corrupcion estructural.
+
+
+4. VERIFICACION INTEGRAL STANDALONE (Modo Mock / Offline)
+--------------------------------------------------------------------------------
+Objetivo:
+  Ejecutar el ciclo completo de integracion sin requerir conexion externa a AWS,
+  utilizando repositorios en memoria para fines de verificacion y diagnostico.
+
+Comando:
+  python demo_runner.py
+
+Resultado verificado:
+  - Inicializacion de ApplicationServer en puerto local 8888.
+  - Registro de suscripcion de ObserverClient.
+  - Despacho y respuesta de transaccion 'get'.
+  - Despacho de transaccion 'set' y captura sincrona de la notificacion reactiva.
+  - Listado de registros mediante RecordIterator.
+  - Inspeccion y volcado de las entradas de auditoria generadas.
+
+
+5. GENERACION DE DOCUMENTACION Y REPORTES
+--------------------------------------------------------------------------------
+Compilacion de documentacion de modulos y clases (pdoc):
+  pdoc -o docs src/tpfi
+
+Generacion de la Guia de Arquitectura y Especificacion (PDF):
+  C
+================================================================================

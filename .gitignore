@@ -48,9 +48,17 @@ dmypy.json
 .DS_Store
 Thumbs.db
 
-# Documentacion generada
+# Documentacion generada y temporales
 docs/_build/
 docs/modules.html
+docs/test.pdf
+docs/index.html
+docs/search.js
+docs/tpfi.html
+
+# Salidas de pruebas y ejecucion de clientes
+output.json
+output*.json
 
 # Informe PDF y su generador: viven fuera del repositorio, en la carpeta
 # superior TPFI/informe. Se dejan ignorados para evitar subirlos por error.

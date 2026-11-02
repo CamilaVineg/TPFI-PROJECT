@@ -13,6 +13,10 @@ y los autores que participaron en el trabajo durante ese periodo.
 
 ### Agregado
 
+- `COMANDOS_DEFENSA.txt`: protocolo formal de ejecucion y plan de pruebas de integracion para la defensa oral del sistema distribuido en 3 terminales concurrentes.
+- `samples/`: juego completo de archivos de prueba JSON (`input_get.json`, `input_set.json`, `input_list.json`, `input_invalido.json`) para ensayar las cuatro acciones del protocolo y la validacion de integridad del Proxy.
+- `demo_runner.py`: script interactivo y demostracion en vivo con repositorios en memoria (funciona tanto con AWS DynamoDB como en modo mock offline).
+- `generate_pdf.py`, `docs/GUIA_ESTUDIO_TPFI.html`, `docs/GUIA_ESTUDIO_TPFI.md` y `docs/GUIA_ESTUDIO_TPFI.pdf`: guia completa de arquitectura, patrones GoF, protocolo de red y banco de preguntas de examen oral.
 - `tests/test_acceptance.py`: suite completa de pruebas de aceptacion automatizadas segun la seccion de Validacion y Verificacion de la consigna (camino feliz con impacto en `CorporateData` y `CorporateLog`, argumentos malformados de CLI y archivo, requerimiento sin datos minimos, clientes ante servidor caido y rechazo de doble bind).
 - `tests/test_hypothesis.py`: pruebas basadas en propiedades con `hypothesis` para verificar ida y vuelta de serializacion del protocolo, decodificacion robusta ante bytes arbitrarios, campos de control de requerimiento, generacion de UUID4 y validacion de identificadores y campos del proxy.
 - Soporte en `singletonclient.py` para el formato JSON indicativo de la consigna (`UUID`, `ID` y `ACTION` en mayusculas, con campos del tuple al nivel raiz para `set`), conservando compatibilidad con el formato propio.
@@ -30,6 +34,11 @@ y los autores que participaron en el trabajo durante ese periodo.
 - `proxy.py`: validacion estricta contra atributos ajenos a `CORPORATE_FIELDS` y liberacion explicita del iterador en `list()`.
 - `singletonproxyobserver.py`: desactivacion de `allow_reuse_address` en Windows para impedir que dos instancias escuchen en el mismo puerto, y aborto con error si falla el registro de auditoria.
 - Plantilla `cookiecutter-tpfi`: sincronizacion de todos los modulos faltantes (`collection.py`, `protocol.py`, `proxy.py`, `repository.py`), tests de aceptacion e hipotesis, parametrizados con `{{ cookiecutter.package_name }}`.
+
+### Autores
+
+- Camila Viñeg
+- Tadeo Rochas
 
 ### Pendiente
 
