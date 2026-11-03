@@ -188,5 +188,5 @@ Compilacion de documentacion de modulos y clases (pdoc):
   pdoc -o docs src/tpfi
 
 Generacion de la Guia de Arquitectura y Especificacion (PDF):
-  C
+  python generate_pdf.py
 ================================================================================

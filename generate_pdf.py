@@ -1,8 +1,8 @@
-"""Script para generar el archivo PDF de la Guía de Estudio y Defensa del TPFI.
+"""Script para generar los archivos PDF de la Guía de Estudio y Guion de Defensa del TPFI.
 
-Convierte 'docs/GUIA_ESTUDIO_TPFI.html' en 'docs/GUIA_ESTUDIO_TPFI.pdf' usando el
-motor de renderizado de Microsoft Edge o Google Chrome en modo headless,
-garantizando tipografia vectorial perfecta, saltos de pagina y colores.
+Convierte los archivos HTML de 'docs/' a PDF usando el motor de renderizado de
+Microsoft Edge o Google Chrome en modo headless, garantizando tipografia
+vectorial perfecta, saltos de pagina y colores.
 """
 
 from __future__ import annotations
@@ -40,23 +40,22 @@ def find_browser() -> str | None:
     return None
 
 
-def generate_pdf() -> int:
-    """Convierte el archivo HTML de documentacion a formato PDF.
+def convert_html_to_pdf(browser: str | None, html_path: Path, pdf_path: Path) -> bool:
+    """Renderiza un archivo HTML en PDF mediante el navegador.
+
+    Args:
+        browser: Ruta al ejecutable del navegador o None.
+        html_path: Ruta al archivo HTML de origen.
+        pdf_path: Ruta al archivo PDF de destino.
 
     Returns:
-        Codigo de salida del proceso (0 para exito, 1 ante error).
+        True si la conversion fue exitosa, False en caso contrario.
     """
-    base_dir = Path(__file__).resolve().parent
-    html_path = base_dir / "docs" / "GUIA_ESTUDIO_TPFI.html"
-    pdf_path = base_dir / "docs" / "GUIA_ESTUDIO_TPFI.pdf"
-
     if not html_path.is_file():
         print(f"[ERROR] No se encontro el archivo HTML en: {html_path}")
-        return 1
+        return False
 
-    browser = find_browser()
     if browser:
-        print(f"[*] Utilizando navegador para renderizar PDF: {browser}")
         cmd = [
             browser,
             "--headless",
@@ -68,22 +67,53 @@ def generate_pdf() -> int:
         try:
             subprocess.run(cmd, check=True, capture_output=True)
             if pdf_path.is_file() and pdf_path.stat().st_size > 0:
-                print("\n[EXITO] PDF generado correctamente en:")
-                print(f"  -> {pdf_path}")
-                print(f"  Tamano: {pdf_path.stat().st_size / 1024:.1f} KB")
-                return 0
+                print(f"[EXITO] PDF generado: {pdf_path.name} ({pdf_path.stat().st_size / 1024:.1f} KB)")
+                return True
         except Exception as err:
-            print(f"[AVISO] Fallo la conversion headless: {err}")
+            print(f"[AVISO] Fallo la conversion headless de {html_path.name}: {err}")
 
-    # Fallback: abrir en el navegador predeterminado para imprimir
-    print("\n[INFO] Abriendo la guia en tu navegador web...")
-    print("Para guardarla como PDF:")
+    # Fallback si falla el modo headless
+    webbrowser.open(html_path.as_uri())
+    return False
+
+
+def generate_all_pdfs() -> int:
+    """Convierte todos los documentos HTML de la carpeta docs a PDF.
+
+    Returns:
+        Codigo de salida del proceso (0 para exito, 1 si todos fallan).
+    """
+    base_dir = Path(__file__).resolve().parent
+    docs_dir = base_dir / "docs"
+
+    documents = [
+        ("GUIA_ESTUDIO_TPFI.html", "GUIA_ESTUDIO_TPFI.pdf"),
+        ("GUION_DEFENSA_ORAL.html", "GUION_DEFENSA_ORAL.pdf"),
+    ]
+
+    browser = find_browser()
+    if browser:
+        print(f"[*] Navegador detectado para renderizado: {browser}\n")
+    else:
+        print("[AVISO] No se detecto navegador. Se abriran en el navegador predeterminado.\n")
+
+    success_count = 0
+    for html_name, pdf_name in documents:
+        html_path = docs_dir / html_name
+        pdf_path = docs_dir / pdf_name
+        if convert_html_to_pdf(browser, html_path, pdf_path):
+            success_count += 1
+
+    if success_count > 0:
+        print(f"\n[OK] Se generaron {success_count} de {len(documents)} archivos PDF en 'docs/'.")
+        return 0
+
+    print("\n[INFO] Para guardar como PDF desde el navegador:")
     print("  1. Presiona Ctrl + P (Imprimir)")
     print("  2. En Destino selecciona 'Guardar como PDF'")
-    print("  3. Guarda el archivo en docs/GUIA_ESTUDIO_TPFI.pdf")
-    webbrowser.open(html_path.as_uri())
+    print("  3. Guarda el archivo en la carpeta 'docs/'")
     return 0
 
 
 if __name__ == "__main__":
-    sys.exit(generate_pdf())
+    sys.exit(generate_all_pdfs())

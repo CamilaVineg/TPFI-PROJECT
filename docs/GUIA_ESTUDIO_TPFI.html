@@ -17,29 +17,29 @@
       color: #1e293b;
       margin: 0;
       padding: 0;
-      font-size: 13.5px;
+      font-size: 13px;
     }
     h1 {
-      font-size: 24px;
+      font-size: 23px;
       color: #0f172a;
       border-bottom: 3px solid #2563eb;
       padding-bottom: 8px;
       margin-top: 0;
-      margin-bottom: 12px;
+      margin-bottom: 10px;
     }
     h2 {
-      font-size: 18px;
+      font-size: 17px;
       color: #1e3a8a;
       border-bottom: 1.5px solid #cbd5e1;
       padding-bottom: 5px;
-      margin-top: 24px;
+      margin-top: 22px;
       margin-bottom: 10px;
       page-break-after: avoid;
     }
     h3 {
-      font-size: 15px;
+      font-size: 14.5px;
       color: #1d4ed8;
-      margin-top: 16px;
+      margin-top: 15px;
       margin-bottom: 6px;
       page-break-after: avoid;
     }
@@ -55,15 +55,15 @@
       border-radius: 4px;
       background: #e0e7ff;
       color: #3730a3;
-      margin-bottom: 10px;
+      margin-bottom: 8px;
     }
     .alert {
       background-color: #f8fafc;
       border-left: 4px solid #3b82f6;
       padding: 10px 14px;
       border-radius: 0 6px 6px 0;
-      margin: 12px 0;
-      font-size: 13px;
+      margin: 10px 0;
+      font-size: 12.5px;
     }
     .alert-tip {
       border-left-color: #10b981;
@@ -76,10 +76,10 @@
     pre {
       background-color: #0f172a;
       color: #f8fafc;
-      padding: 10px 12px;
+      padding: 9px 12px;
       border-radius: 6px;
       font-family: Consolas, "Courier New", monospace;
-      font-size: 12px;
+      font-size: 11.5px;
       overflow-x: auto;
       margin: 8px 0;
       page-break-inside: avoid;
@@ -100,13 +100,13 @@
     table {
       width: 100%;
       border-collapse: collapse;
-      margin: 12px 0;
-      font-size: 12.5px;
+      margin: 10px 0;
+      font-size: 12px;
       page-break-inside: avoid;
     }
     th, td {
       border: 1px solid #cbd5e1;
-      padding: 7px 10px;
+      padding: 6px 9px;
       text-align: left;
     }
     th {
@@ -124,30 +124,32 @@
       background: #f8fafc;
       border: 1px solid #e2e8f0;
       border-radius: 6px;
-      padding: 12px;
+      padding: 10px;
       font-family: Consolas, monospace;
-      font-size: 11px;
-      line-height: 1.35;
+      font-size: 10.5px;
+      line-height: 1.3;
       white-space: pre;
-      margin: 12px 0;
+      margin: 10px 0;
       page-break-inside: avoid;
     }
     .qa-box {
       background: #ffffff;
       border: 1px solid #e2e8f0;
       border-radius: 6px;
-      padding: 10px 14px;
-      margin-bottom: 12px;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+      padding: 9px 13px;
+      margin-bottom: 10px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.04);
       page-break-inside: avoid;
     }
     .qa-q {
       font-weight: 700;
       color: #1e3a8a;
       margin-bottom: 4px;
+      font-size: 13px;
     }
     .qa-a {
       color: #334155;
+      font-size: 12.5px;
     }
     @media print {
       body {
@@ -160,12 +162,12 @@
 <body>
 
   <span class="badge">UADER - FCyT | Ingeniería de Software II</span>
-  <h1>Guía Completa de Estudio y Defensa: TPFI</h1>
+  <h1>Guía Maestra de Estudio y Defensa: TPFI</h1>
   <p><strong>Proyecto:</strong> TPFI-PROJECT (Arquitectura Distribuida con Patrones GoF y AWS DynamoDB)</p>
   <p><strong>Autores del Repositorio:</strong> Camila Viñeg, Tadeo Rochas, Abril Poggio | <strong>Versión:</strong> 0.5.0</p>
 
   <div class="alert alert-tip">
-    <strong>Objetivo de esta guía:</strong> Proporcionar una comprensión profunda de la arquitectura, patrones de diseño, decisiones técnicas, flujo de ejecución y preguntas de coloquio para defender el Trabajo Práctico con éxito.
+    <strong>Objetivo de esta guía:</strong> Proporcionar una comprensión profunda de la arquitectura, patrones de diseño, decisiones técnicas, flujo de ejecución, pruebas automatizadas y preguntas de coloquio para defender el Trabajo Práctico con éxito ante la cátedra.
   </div>
 
   <h2>1. Visión General del Sistema y Requerimientos</h2>
@@ -175,230 +177,251 @@
   <table>
     <thead>
       <tr>
-        <th>Programa</th>
+        <th>Programa (CLI)</th>
         <th>Archivo fuente</th>
         <th>Rol y Responsabilidad</th>
       </tr>
     </thead>
     <tbody>
       <tr>
-        <td><code>SingletonProxyObserverTPFI</code></td>
+        <td><code>singletonproxyobserver</code></td>
         <td><code>src/tpfi/singletonproxyobserver.py</code></td>
-        <td>Servidor TCP multihilo. Recibe conexiones, audita cada petición, valida mediante Proxy, interactúa con la base física vía Singleton y emite notificaciones a observadores.</td>
+        <td>Servidor TCP multihilo (<code>SingletonProxyObserverTPFI</code>). Recibe conexiones concurrentes, audita cada petición en <code>CorporateLog</code>, intercepta y valida mediante Proxy, ejecuta la persistencia física vía Singleton y emite notificaciones a observadores.</td>
       </tr>
       <tr>
-        <td><code>SingletonClient</code></td>
+        <td><code>singletonclient</code></td>
         <td><code>src/tpfi/singletonclient.py</code></td>
-        <td>Cliente de operaciones transaccionales puntuales. Lee una petición JSON (<code>-i input.json</code>), consulta o actualiza la tabla y emite la respuesta (<code>-o output.json</code> o consola).</td>
+        <td>Cliente transaccional puntual (<code>SingletonClient</code>). Lee una petición JSON (<code>-i input.json</code>), consulta o actualiza la tabla y emite la respuesta (<code>-o output.json</code> o consola). Soporta tanto el formato propio como el formato con mayúsculas a nivel raíz de la consigna.</td>
       </tr>
       <tr>
-        <td><code>ObserverClient</code></td>
+        <td><code>observerclient</code></td>
         <td><code>src/tpfi/observerclient.py</code></td>
-        <td>Cliente suscriptor. Se conecta, envía su UUID de CPU y mantiene el socket abierto para recibir actualizaciones en tiempo real cada vez que un registro cambia.</td>
+        <td>Cliente suscriptor reactivo (<code>ObserverClient</code>). Se conecta, envía su UUID de CPU (<code>subscribe</code>) y mantiene el socket abierto para recibir actualizaciones en tiempo real cada vez que un registro cambia. Cuenta con reconexión automática ante caídas de red.</td>
       </tr>
     </tbody>
   </table>
 
   <h3>Las 2 Tablas de AWS DynamoDB:</h3>
   <ul>
-    <li><strong><code>CorporateData</code>:</strong> Almacena los registros de sedes. Clave primaria: <code>id</code>. Atributos: <code>cp</code>, <code>CUIT</code>, <code>domicilio</code>, <code>idreq</code>, <code>idSeq</code>, <code>localidad</code>, <code>provincia</code>, <code>sede</code>, <code>seqID</code>, <code>telefono</code>, <code>web</code>.</li>
-    <li><strong><code>CorporateLog</code>:</strong> Pista de <strong>auditoría obligatoria</strong>. Toda acción (<code>get</code>, <code>list</code>, <code>set</code>, <code>subscribe</code>) registra: <code>id</code> (= <code>session_id</code>), <code>action</code>, <code>client_uuid</code>, <code>timestamp</code> (ISO 8601 UTC), <code>key</code> (el ID o <code>*</code>), y <code>cpu_info</code> (nodo, SO, arquitectura, procesador y UUID de CPU vía <code>uuid.getnode()</code>).</li>
+    <li><strong><code>CorporateData</code>:</strong> Almacena los registros de sedes institucionales.
+      <ul>
+        <li><strong>Clave primaria (Partition Key):</strong> <code>id</code> (texto no vacío, identificador único de la sede).</li>
+        <li><strong>Campos del tuple corporativo:</strong> <code>cp</code>, <code>CUIT</code>, <code>domicilio</code>, <code>idreq</code>, <code>idSeq</code>, <code>localidad</code>, <code>provincia</code>, <code>sede</code>, <code>seqID</code>, <code>telefono</code>, <code>web</code>.</li>
+      </ul>
+    </li>
+    <li><strong><code>CorporateLog</code>:</strong> Pista de <strong>auditoría obligatoria</strong> por requerimiento de seguridad.
+      <ul>
+        <li><strong>Clave primaria:</strong> <code>id</code> (almacena el <code>session_id</code> generado autoritativamente por el servidor).</li>
+        <li><strong>Atributos registrados:</strong> <code>action</code> (<code>get</code>, <code>set</code>, <code>list</code>, <code>subscribe</code>), <code>client_uuid</code> (identificador de CPU del solicitante), <code>session_id</code>, <code>timestamp</code> (ISO 8601 UTC), <code>key</code> (el <code>id</code> afectado o <code>*</code> si aplica a toda la tabla), y <code>cpu_info</code> (nodo, SO, arquitectura, procesador y UUID vía <code>uuid.getnode()</code>).</li>
+      </ul>
+    </li>
   </ul>
 
   <div class="page-break"></div>
 
-  <h2>2. Arquitectura y los 4 Patrones de Diseño (GoF)</h2>
+  <h2>2. Arquitectura y los 4 Patrones de Diseño (GoF) en Detalle</h2>
 
   <div class="diagram">
-                  +----------------------------------------------+
-                  |         SingletonProxyObserverTPFI           |
-                  |                (Servidor TCP)                |
-                  +----------------------------------------------+
-                         |                              |
-         [Auditoría Obligatoria]               [Acceso a Datos]
-                         v                              v
-               +--------------------+          +------------------+
-               |  AuditRepository   |          |    DataProxy     |  <-- PATRÓN PROXY
-               |    (SINGLETON)     |          +------------------+
-               +--------------------+                   | (Valida y delega)
-                         |                              v
-                         |                     +------------------+
-                         |                     |  DataRepository  |  <-- PATRÓN SINGLETON
-                         |                     |   (SINGLETON)    |
-                         |                     +------------------+
-                         |                              |
-                         v                              v
-              +----------------------+     +--------------------------+
-              | DynamoDB CorporateLog|     | DynamoDB CorporateData   |
-              +----------------------+     +--------------------------+
-                                                        |
-                                              (Si hubo 'set' exitoso)
-                                                        v
-                                               +------------------+
-                                               | ObservedSubject  |  <-- PATRÓN OBSERVER
-                                               +------------------+
-                                                        | (Notificación en cascada \n)
-                                                        v
-                                              [ ObserverClient ]
+                   +----------------------------------------------+
+                   |         SingletonProxyObserverTPFI           |
+                   |       (Servidor TCP Multihilo - :8080)       |
+                   +----------------------------------------------+
+                         |                                |
+         [1. Auditoría Obligatoria]              [2. Acceso a Datos]
+                         v                                v
+               +--------------------+           +------------------+
+               |  AuditRepository   |           |    DataProxy     |  &lt;-- PATRÓN PROXY
+               |    (SINGLETON)     |           +------------------+
+               +--------------------+                    |
+                         |                      (Valida y delega)
+                         |                               v
+                         |                      +------------------+
+                         |                      |  DataRepository  |  &lt;-- PATRÓN SINGLETON
+                         |                      |   (SINGLETON)    |
+                         |                      +------------------+
+                         |                               |
+                         v                               v
+              +----------------------+        +--------------------------+
+              | DynamoDB CorporateLog|        | DynamoDB CorporateData   |
+              +----------------------+        +--------------------------+
+                                                          |
+                                                (Si hubo 'set' exitoso)
+                                                          v
+                                                 +------------------+
+                                                 | ObservedSubject  |  &lt;-- PATRÓN OBSERVER
+                                                 +------------------+
+                                                          | (Notificación en cascada \n)
+                                                          v
+                                                [ ObserverClient ]
   </div>
 
   <h3>1. Patrón Singleton (<code>tpfi.patterns.singleton</code> y <code>tpfi.repository</code>)</h3>
   <ul>
-    <li><strong>Propósito:</strong> Garantizar una única instancia física y punto de acceso global a los recursos de conexión con DynamoDB. Abrir conexiones con boto3 en cada petición saturaría recursos y sockets.</li>
-    <li><strong>Implementación:</strong> Metaclase <code>SingletonABCMeta</code> (hereda de <code>abc.ABCMeta</code>). Emplea <em>Double-Checked Locking</em> con <code>threading.Lock</code> en su método <code>__call__</code> para garantizar <em>thread-safety</em> multihilo.</li>
-    <li><strong>Uso en el proyecto:</strong> Se aplica a <code>DataRepository</code> (acceso a <code>CorporateData</code>) y <code>AuditRepository</code> (acceso a <code>CorporateLog</code>). Ambos son Singletons independientes.</li>
+    <li><strong>Problema que resuelve:</strong> En un servidor multihilo, abrir clientes de AWS (<code>boto3.resource</code>) en cada petición agota los sockets, satura file descriptors y añade latencia. Se requiere un punto de acceso único y compartido a la base física.</li>
+    <li><strong>Implementación:</strong> Metaclase <code>SingletonABCMeta</code> (hereda de <code>abc.ABCMeta</code>). Intercepta la creación mediante <code>__call__</code> aplicando <strong>Double-Checked Locking</strong> con <code>threading.Lock</code> para garantizar seguridad multihilo sin bloquear lecturas concurrentes.</li>
+    <li><strong>Uso:</strong> Se aplica a <code>DataRepository</code> y a <code>AuditRepository</code> como Singletons independientes.</li>
   </ul>
 
   <h3>2. Patrón Proxy (<code>tpfi.patterns.proxy</code> y <code>tpfi.proxy</code>)</h3>
   <ul>
-    <li><strong>Propósito:</strong> Actuar como intermediario entre el cliente y el repositorio físico, agregando una capa de control y validación de reglas de negocio sin acoplar la base de datos.</li>
-    <li><strong>Implementación:</strong> Interfaz abstracta <code>ProxyInterface</code> e implementación <code>DataProxy</code>.</li>
-    <li><strong>Responsabilidades del Proxy:</strong>
+    <li><strong>Problema que resuelve:</strong> El servidor jamás debe comunicarse directamente con DynamoDB sin control. El Proxy actúa como intermediario de protección y validación de reglas de negocio.</li>
+    <li><strong>Los 5 Pasos de Validación en <code>DataProxy.set()</code>:</strong>
       <ol>
-        <li><strong>Validación estricta:</strong> Verifica que el <code>id</code> sea texto no vacío y que <code>data</code> sea un diccionario.</li>
-        <li><strong>Protección de campos reservados:</strong> Prohíbe que el cliente intente modificar la clave primaria <code>id</code> dentro de <code>data</code>.</li>
-        <li><strong>Actualización parcial:</strong> Si el registro ya existe, fusiona los campos nuevos con los existentes (<code>{**current, **values}</code>) sin borrar los datos omitidos. Si no existe, lo crea.</li>
+        <li><strong>Validación de clave:</strong> Comprueba que <code>id</code> sea texto no vacío.</li>
+        <li><strong>Validación de estructura:</strong> Asegura que <code>values</code> sea un objeto JSON.</li>
+        <li><strong>Protección de clave reservada:</strong> Bloquea cualquier intento de modificar la clave primaria <code>id</code> dentro de <code>data</code>.</li>
+        <li><strong>Validación estricta de esquema:</strong> Rechaza cualquier atributo ajeno a <code>CORPORATE_FIELDS</code>.</li>
+        <li><strong>Delegación atómica:</strong> Delega en <code>repository.merge()</code>.</li>
       </ol>
     </li>
   </ul>
 
   <h3>3. Patrón Observer (<code>tpfi.patterns.observer</code>)</h3>
   <ul>
-    <li><strong>Propósito:</strong> Definir una dependencia uno-a-muchos entre el servidor y los clientes interesados, de forma tal que cuando un registro cambie, todos los observadores sean notificados automáticamente.</li>
-    <li><strong>Implementación:</strong> El servidor instancia un <code>ObservedSubject</code>. Mantiene una colección de sockets de observadores activos: <code>_observers: dict[str, socket.socket]</code>.</li>
-    <li><strong>Notificación en Cascada:</strong> Cuando cualquier cliente ejecuta una acción <code>set</code> exitosa, el servidor ejecuta <code>self.server.subject.notify(notification)</code>. El sujeto itera los observadores y retransmite el payload JSON delimitado por <code>\n</code>. Si detecta un socket caído, lo desuscribe automáticamente.</li>
+    <li><strong>Problema que resuelve:</strong> Notificar en tiempo real a clientes suscriptos cada vez que un registro corporativo se modifique (<code>set</code>), eliminando la necesidad de polling.</li>
+    <li><strong>Snapshot Isolation:</strong> El sujeto (<code>ObservedSubject</code>) clona la lista de observadores bajo lock y libera el cerrojo antes de transmitir por red, evitando deadlocks o cuellos de botella con clientes lentos.</li>
+    <li><strong>Poda Automática (Auto-pruning):</strong> Si un socket falla (<code>SocketDeliveryError</code>), el sujeto lo desuscribe automáticamente liberando los recursos del sistema.</li>
+    <li><strong>Soporte multiconexión:</strong> Permite múltiples observadores concurrentes desde una misma máquina (mismo CPU UUID).</li>
   </ul>
 
   <h3>4. Patrón Iterator (<code>tpfi.patterns.iterator</code> y <code>tpfi.collection</code>)</h3>
   <ul>
-    <li><strong>Problema que resuelve:</strong> La operación <code>scan</code> de AWS DynamoDB tiene un límite físico de <strong>1 MB por petición</strong>. Si una tabla supera ese tamaño, DynamoDB trunca la respuesta y devuelve <code>LastEvaluatedKey</code>. Sin iterador, los listados quedan incompletos.</li>
-    <li><strong>Estructura GoF:</strong>
-      <ul>
-        <li><code>Aggregate</code>: <code>AggregateMixin</code> (protocolo de agregación).</li>
-        <li><code>ConcreteAggregate</code>: <code>CorporateDataCollection</code>.</li>
-        <li><code>Iterator</code>: <code>IteratorProtocol</code>.</li>
-        <li><code>ConcreteIterator</code>: <code>RecordIterator</code>.</li>
-      </ul>
-    </li>
-    <li><strong>Evaluación Perezosa (Lazy):</strong> <code>RecordIterator</code> no descarga la tabla completa en memoria; solicita a AWS la siguiente página únicamente cuando se agota la anterior. Permite además aplicar filtros y ordenación en el flujo.</li>
+    <li><strong>Problema que resuelve:</strong> DynamoDB limita las lecturas de <code>scan()</code> a <strong>1 MB por llamada</strong>. Si una tabla supera ese tamaño, DynamoDB trunca la respuesta y devuelve <code>LastEvaluatedKey</code>. Sin iterador, los listados quedan incompletos.</li>
+    <li><strong>Mapeo GoF:</strong> <code>AggregateMixin</code> (Aggregate), <code>CorporateDataCollection</code> (ConcreteAggregate), <code>IteratorProtocol</code> (Iterator) y <code>RecordIterator</code> (ConcreteIterator).</li>
+    <li><strong>Evaluación Perezosa (Lazy):</strong> <code>RecordIterator</code> solicita páginas a DynamoDB recién cuando se agota la anterior. Permite además aplicar filtros y ordenación en el flujo. Al finalizar, su método <code>close()</code> cierra el generador subyacente.</li>
   </ul>
 
   <div class="page-break"></div>
 
   <h2>3. Protocolo de Comunicación y Red (TCP Stream Framing)</h2>
-  <p>En TCP, la transmisión es un <em>stream</em> continuo de bytes (no orientado a datagramas). Dos mensajes pueden llegar juntos o un mensaje puede llegar fragmentado en varios bloques de red.</p>
-
+  <p>TCP es un protocolo orientado a flujo continuo de bytes (<em>stream</em>). Dos mensajes consecutivos pueden llegar juntos o un mensaje puede llegar fragmentado.</p>
+  
   <div class="alert alert-warn">
-    <strong>Encuadre de Mensajes (Line-delimited JSON):</strong> Cada mensaje viaja serializado como una línea JSON terminada estrictamente con el caracter <code>\n</code>.
+    <strong>Encuadre (Line-delimited JSON):</strong> Cada mensaje viaja serializado como una línea JSON terminada estrictamente con el delimitador <code>\n</code>.
   </div>
 
-  <p>La clase <code>JsonSocket</code> ([src/tpfi/protocol.py](file:///c:/FACULTAD/3er%20A%C3%91O/IS2/TPFI/TPFI-PROJECT/src/tpfi/protocol.py#L196)) encapsula el socket nativo y mantiene un buffer interno (<code>self._buffer</code>). Al recibir datos con <code>recv(4096)</code>, busca <code>\n</code> con <code>partition()</code> y devuelve únicamente mensajes JSON completos y válidos.</p>
+  <p>La clase <code>JsonSocket</code> (<code>src/tpfi/protocol.py</code>) gestiona un búfer interno, detecta <code>\n</code> y devuelve mensajes íntegros. Además, impone un límite de <strong>1 MiB (<code>MAX_MESSAGE_SIZE</code>)</strong> como protección contra ataques de denegación de servicio (DoS por consumo de memoria).</p>
 
-  <h3>Tipos de Mensajes:</h3>
+  <h3>Esquema de los 4 Mensajes del Protocolo:</h3>
   <pre><code>// 1. Requerimiento del Cliente (Request)
 {
   "type": "request",
   "action": "get" | "set" | "list" | "subscribe",
-  "session_id": "uuid-v4",
+  "session_id": "uuid-opcional",
   "client_uuid": "uuid-cpu",
-  "id": "UADER-FCyT-IS2",         // (opcional segun accion)
-  "data": { "sede": "FCyT Central" } // (solo para accion set)
+  "id": "UADER-FCyT-IS2",
+  "data": { "telefono": "03442 43-1442" }
 }
 
 // 2. Respuesta Exitosa del Servidor (Response OK)
 {
   "type": "response",
   "status": "ok",
-  "session_id": "uuid-v4",
-  "data": { ... }
+  "session_id": "uuid4-generado-por-servidor",
+  "data": { "id": "UADER-FCyT-IS2", "sede": "FCyT Central", ... }
 }
 
 // 3. Respuesta de Error del Servidor (Response Error)
 {
   "type": "response",
   "status": "error",
-  "session_id": "uuid-v4",
-  "error": "El registro 'NO-EXISTE' no existe"
+  "session_id": "uuid4-generado-por-servidor",
+  "error": "No se admiten los campos reservados: id"
 }
 
-// 4. Notificacion en Cascada para Observadores (Notification)
+// 4. Notificación en Cascada para Observadores (Notification)
 {
   "type": "notification",
   "action": "set",
-  "session_id": "uuid-v4",
-  "data": { "id": "UADER-FCyT-IS2", "sede": "FCyT Central", ... }
+  "session_id": "uuid4-generado-por-servidor",
+  "data": { "id": "UADER-FCyT-IS2", "telefono": "03442 43-1442", ... }
 }</code></pre>
 
-  <div class="page-break"></div>
+  <h2>4. Auditoría, Concurrencia y Persistencia Atómica</h2>
+  <ul>
+    <li><strong>Autoridad del <code>session_id</code>:</strong> El servidor genera un <code>uuid.uuid4()</code> autoritativo en cada petición entrante. Evita que un cliente malicioso sobrescriba registros de auditoría previos en <code>CorporateLog</code> o suplante sesiones.</li>
+    <li><strong>Actualización Atómica (<code>DataRepository.merge</code>):</strong> Se delega la fusión directamente en DynamoDB mediante una única operación <code>update_item</code> con expresiones <code>SET</code> e <code>if_not_exists</code>. Esto elimina la condición de carrera (<em>race condition</em>) que ocurriría si se hiciera un <code>get</code> seguido de un <code>put</code> en Python.</li>
+    <li><strong>Detección de doble bind en Windows:</strong> Se desactiva <code>allow_reuse_address</code> para <code>sys.platform == 'win32'</code>, impidiendo que dos servidores escuchen simultáneamente en el mismo puerto.</li>
+  </ul>
 
-  <h2>4. Guía de Ejecución y Demostración en Vivo</h2>
-
-  <h3>Opción A: Demostración Rápida Automatizada (Script <code>demo_runner.py</code>)</h3>
-  <p>Ideal si no dispones de conexión con AWS en el momento de la exposición, o para mostrar en 10 segundos el flujo completo funcionando sin errores:</p>
-  <pre><code>python demo_runner.py</code></pre>
-  <p><strong>Lo que demuestra en consola ante los profesores:</strong></p>
-  <ol>
-    <li>Levanta el servidor multihilo TCP en <code>127.0.0.1:8888</code>.</li>
-    <li>Conecta en segundo plano un <code>ObserverClient</code> y confirma su suscripción.</li>
-    <li>Ejecuta un <code>get</code> con <code>SingletonClient</code> y muestra la respuesta.</li>
-    <li>Ejecuta un <code>set</code> con actualización parcial y muestra cómo el <code>ObserverClient</code> <strong>recibe inmediatamente la notificación en cascada</strong>.</li>
-    <li>Ejecuta un <code>list</code> completo paginado con el patrón Iterator.</li>
-    <li>Verifica e imprime el contenido de la tabla de auditoría <code>CorporateLog</code>.</li>
-  </ol>
-
-  <h3>Opción B: Demostración Manual en 3 Terminales (Conforme a la consigna)</h3>
-  <p>Abre 3 ventanas de terminal (PowerShell o Bash) en la raíz del proyecto:</p>
-
-  <p><strong>Terminal 1: Iniciar el Servidor</strong></p>
-  <pre><code>singletonproxyobserver -p=8080 -v</code></pre>
-
-  <p><strong>Terminal 2: Iniciar el Observador</strong></p>
-  <pre><code>observerclient -s=localhost -p=8080 -v</code></pre>
-
-  <p><strong>Terminal 3: Ejecutar operaciones del Cliente</strong></p>
-  <pre><code># 1. Consultar registro existente
-singletonclient -i=samples/input_get.json -v
-
-# 2. Modificar registro (¡Observa la Terminal 2 recibir la notificacion!)
-singletonclient -i=samples/input_set.json -v
-
-# 3. Listar todos los registros
-singletonclient -i=samples/input_list.json -v</code></pre>
+  <h2>5. Estrategia de Pruebas Automatizadas (195 Tests - 95.03% Cobertura)</h2>
+  <ul>
+    <li><strong>Pruebas Unitarias:</strong> Dobles de prueba para aislar la red TCP y las llamadas a DynamoDB.</li>
+    <li><strong>Suite de Aceptación (<code>tests/test_acceptance.py</code>):</strong> Cubre los 5 escenarios obligatorios: camino feliz con impacto en ambas tablas, argumentos CLI y JSON corruptos, peticiones sin datos mínimos, comportamiento ante servidor caído y rechazo de doble bind.</li>
+    <li><strong>Pruebas de Propiedades con Hypothesis (<code>tests/test_hypothesis.py</code>):</strong> Fuzzing del protocolo con secuencias arbitrarias de bytes e ida y vuelta de serialización JSON.</li>
+    <li><strong>Control Estático:</strong> <code>ruff check .</code> (0 errores), <code>black --check .</code> (100% homogéneo), <code>mypy --strict</code> (tipado estricto verificado) y <code>bandit</code> (0 vulnerabilidades).</li>
+  </ul>
 
   <div class="page-break"></div>
 
-  <h2>5. Banco de Preguntas y Respuestas para el Coloquio</h2>
+  <h2>6. Protocolo de Demostración en Vivo para la Presentación</h2>
+
+  <div class="alert alert-tip">
+    <strong>Demostración Oficial en 3 Terminales:</strong> Ejecutar los comandos en el orden indicado para ilustrar la interacción en red y la notificación en tiempo real.
+  </div>
+
+  <p><strong>Terminal 1: Servidor de Aplicaciones</strong></p>
+  <pre><code>python -m tpfi.singletonproxyobserver -p 8080 -v</code></pre>
+
+  <p><strong>Terminal 2: Observador Reactivo</strong></p>
+  <pre><code>python -m tpfi.observerclient -s 127.0.0.1 -p 8080 -v</code></pre>
+
+  <p><strong>Terminal 3: Cliente de Transacciones</strong></p>
+  <pre><code># 1. Consulta por clave (Lectura intermediada por Proxy)
+python -m tpfi.singletonclient -s 127.0.0.1 -p 8080 -i "samples/input_get.json" -v
+
+# 2. Modificación parcial (La Terminal 2 recibe la notificación en cascada en tiempo real)
+python -m tpfi.singletonclient -s 127.0.0.1 -p 8080 -i "samples/input_set.json" -v
+
+# 3. Listado completo (Paginación transparente con el patrón Iterator)
+python -m tpfi.singletonclient -s 127.0.0.1 -p 8080 -i "samples/input_list.json" -v
+
+# 4. Intento inválido (El Proxy rechaza alterar la clave primaria reservada)
+python -m tpfi.singletonclient -s 127.0.0.1 -p 8080 -i "samples/input_invalido.json" -v</code></pre>
+
+  <p><em>Plan de contingencia offline:</em> Si no hay conexión a AWS en el aula, ejecutar <code>python demo_runner.py</code> para mostrar el ciclo completo con repositorios en memoria.</p>
+
+  <h2>7. Banco Maestro de Preguntas para el Coloquio Oral</h2>
 
   <div class="qa-box">
-    <div class="qa-q">P1: ¿Por qué usaron una metaclase para el Singleton en lugar de un decorador o un método get_instance()?</div>
-    <div class="qa-a"><strong>R:</strong> Porque una metaclase (<code>SingletonABCMeta</code>) intercepta el constructor nativo de la clase (<code>__call__</code>). Esto permite que el resto del sistema instancie la clase de forma idiomática con <code>DataRepository()</code> sin tener que preocuparse de si es un Singleton o no. Además, se implementó con <em>Double-Checked Locking</em> para garantizar seguridad en entornos multihilo.</div>
+    <div class="qa-q">P1: ¿Por qué usaron una metaclase para el Singleton en lugar de un decorador o get_instance()?</div>
+    <div class="qa-a"><strong>R:</strong> Porque una metaclase (<code>SingletonABCMeta</code>) gobierna la instanciación a nivel de lenguaje interceptando <code>__call__</code>. Permite que el resto del sistema instancie la clase de forma idiomática con <code>DataRepository()</code> sin acoplarse a funciones externas, admite herencia limpia de <code>abc.ABC</code> y se sincroniza con <em>Double-Checked Locking</em>.</div>
   </div>
 
   <div class="qa-box">
-    <div class="qa-q">P2: ¿Por qué la validación está en el Proxy y no dentro del Repositorio?</div>
-    <div class="qa-a"><strong>R:</strong> Por el Principio de Responsabilidad Única (SRP). <code>DataRepository</code> solo se encarga del acceso físico a DynamoDB. El <code>DataProxy</code> gestiona las reglas de negocio (campos obligatorios, protección de claves primarias y combinación de actualizaciones parciales). Esto permite cambiar de base de datos o usar dobles de prueba (mocks) en los tests unitarios sin tocar la lógica de negocio.</div>
+    <div class="qa-q">P2: ¿Por qué la validación reside en el Proxy y no dentro del Repositorio?</div>
+    <div class="qa-a"><strong>R:</strong> Por el Principio de Responsabilidad Única (SRP). <code>DataRepository</code> solo se encarga del acceso físico a DynamoDB. <code>DataProxy</code> aplica las reglas de negocio (campos obligatorios, protección de claves reservadas y rechazo de campos ajenos), permitiendo cambiar de motor de base de datos o usar dobles de prueba sin alterar la lógica de validación.</div>
   </div>
 
   <div class="qa-box">
-    <div class="qa-q">P3: ¿Qué sucede si un cliente observador se desconecta abruptamente?</div>
-    <div class="qa-a"><strong>R:</strong> En el servidor, al intentar enviar una notificación o al detectar el cierre del canal en <code>ServerHandler</code>, se lanza una excepción de socket. El servidor captura el error, llama a <code>unsubscribe()</code> y cierra el socket para evitar fugas de memoria y descriptores huérfanos. En el cliente, <code>ObserverClient</code> captura la caída y reintenta conectarse cada 30 segundos automáticamente.</div>
+    <div class="qa-q">P3: ¿Qué sucede si dos clientes envían un set concurrente sobre el mismo registro?</div>
+    <div class="qa-a"><strong>R:</strong> Si hiciéramos un <code>get</code> previo en Python y luego un <code>put</code>, habría una condición de carrera (<em>race condition</em>). En nuestro diseño, <code>DataRepository.merge()</code> delega la operación en DynamoDB mediante una llamada atómica a <code>update_item</code> con expresiones de actualización, garantizando atomicidad a nivel de registro.</div>
   </div>
 
   <div class="qa-box">
-    <div class="qa-q">P4: ¿Por qué fue necesario incorporar el patrón Iterator en la versión 0.5.0?</div>
-    <div class="qa-a"><strong>R:</strong> DynamoDB limita las lecturas de <code>scan</code> a 1 MB por llamada. Si la tabla supera ese límite, la respuesta se trunca silenciosamente y entrega una <code>LastEvaluatedKey</code>. El <code>RecordIterator</code> recorre la tabla página por página bajo demanda (lazy evaluation), garantizando que ningún registro quede sin leer sin saturar la memoria del servidor.</div>
+    <div class="qa-q">P4: ¿Por qué el session_id lo crea el servidor y no el cliente?</div>
+    <div class="qa-a"><strong>R:</strong> Por seguridad e integridad de la auditoría. Si el cliente generara el identificador de sesión, podría inventar identificadores repetidos para sobrescribir entradas de auditoría previas en <code>CorporateLog</code> o suplantar sesiones ajenas. El servidor actúa como autoridad certificante generando un <code>uuid.uuid4()</code> único.</div>
   </div>
 
   <div class="qa-box">
-    <div class="qa-q">P5: ¿Por qué cada mensaje en los sockets TCP termina en '\n'?</div>
-    <div class="qa-a"><strong>R:</strong> Porque TCP es un protocolo de flujo continuo de bytes (stream), no un protocolo de paquetes delimitados. Para saber dónde termina un mensaje JSON y empieza el siguiente sin tener que cerrar la conexión TCP, se usa el delimitador de nueva línea <code>\n</code> (Framing). <code>JsonSocket</code> acumula un buffer y entrega el mensaje solo cuando encuentra el delimitador.</div>
+    <div class="qa-q">P5: ¿Por qué fue indispensable el patrón Iterator en la versión 0.5.0?</div>
+    <div class="qa-a"><strong>R:</strong> DynamoDB limita las lecturas de <code>scan</code> a 1 MB por llamada. Si la tabla supera ese límite, la respuesta se trunca y devuelve <code>LastEvaluatedKey</code>. El iterador (<code>RecordIterator</code>) resuelve la paginación transparente multietapa de forma perezosa (lazy evaluation), solicitando páginas sucesivas a AWS recién cuando el consumidor agota la actual sin saturar la memoria RAM.</div>
   </div>
 
   <div class="qa-box">
-    <div class="qa-q">P6: ¿Cómo se maneja la concurrencia en el servidor?</div>
-    <div class="qa-a"><strong>R:</strong> La clase <code>ApplicationServer</code> hereda de <code>socketserver.ThreadingTCPServer</code> con <code>daemon_threads = True</code>. Cada cliente que se conecta es atendido en un hilo independiente (thread), permitiendo que múltiples clientes consulten mientras los observadores mantienen sockets abiertos de larga duración.</div>
+    <div class="qa-q">P6: ¿Cómo se maneja la desconexión abrupta de un cliente observador?</div>
+    <div class="qa-a"><strong>R:</strong> En el servidor, al intentar enviar una notificación o detectar el cierre del canal, se captura la excepción de socket (<code>SocketDeliveryError</code>). El sujeto invoca automáticamente <code>unsubscribe()</code> y libera el descriptor (poda automática). En el cliente, <code>ObserverClient</code> captura el error y activa un bucle de reconexión periódica.</div>
+  </div>
+
+  <div class="qa-box">
+    <div class="qa-q">P7: ¿Cómo se protege el servidor contra ataques de denegación de servicio por memoria en sockets?</div>
+    <div class="qa-a"><strong>R:</strong> En el protocolo (<code>JsonSocket</code>), se impone un límite máximo de tamaño de mensaje de 1 MiB (<code>MAX_MESSAGE_SIZE</code>). Si un emisor envía un flujo continuo de bytes sin el delimitador <code>\n</code>, el socket interrumpe la lectura y aborta la conexión antes de consumir la memoria del servidor.</div>
+  </div>
+
+  <div class="qa-box">
+    <div class="qa-q">P8: ¿Por qué el patrón Observer utiliza Snapshot Isolation al momento de notificar?</div>
+    <div class="qa-a"><strong>R:</strong> Porque transmitir datos por sockets TCP hacia múltiples clientes es una operación lenta sujeta a latencias de red. Si mantuviéramos el cerrojo adquirido durante las llamadas a <code>sendall</code>, un observador con conexión lenta bloquearía a todos los hilos del servidor. Al clonar la lista de observadores bajo lock y liberarlo de inmediato, la difusión se ejecuta sin frenar el servidor.</div>
   </div>
 
 </body>
 </html>
-

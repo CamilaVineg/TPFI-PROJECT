@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Guion de Exposición y Defensa Oral - TPFI IS2</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 16mm 14mm 16mm 14mm;
+      @bottom-right {
+        content: counter(page);
+      }
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.45;
+      color: #1e293b;
+      margin: 0;
+      padding: 0;
+      font-size: 13px;
+    }
+    h1 {
+      font-size: 22px;
+      color: #0f172a;
+      border-bottom: 3px solid #2563eb;
+      padding-bottom: 6px;
+      margin-top: 0;
+      margin-bottom: 8px;
+    }
+    h2 {
+      font-size: 16px;
+      color: #1e3a8a;
+      border-bottom: 1.5px solid #cbd5e1;
+      padding-bottom: 4px;
+      margin-top: 18px;
+      margin-bottom: 8px;
+      page-break-after: avoid;
+    }
+    h3 {
+      font-size: 14px;
+      color: #1d4ed8;
+      margin-top: 14px;
+      margin-bottom: 6px;
+      page-break-after: avoid;
+    }
+    p, li {
+      margin-top: 3px;
+      margin-bottom: 5px;
+    }
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      font-size: 11px;
+      font-weight: 600;
+      border-radius: 4px;
+      background: #e0e7ff;
+      color: #3730a3;
+      margin-bottom: 8px;
+    }
+    .diagram {
+      background: #0f172a;
+      color: #f8fafc;
+      border-radius: 6px;
+      padding: 10px;
+      font-family: Consolas, monospace;
+      font-size: 11px;
+      line-height: 1.35;
+      white-space: pre;
+      margin: 10px 0;
+      page-break-inside: avoid;
+    }
+    pre {
+      background-color: #0f172a;
+      color: #f8fafc;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 12px;
+      overflow-x: auto;
+      margin: 6px 0;
+      page-break-inside: avoid;
+    }
+    code {
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 12px;
+      background-color: #f1f5f9;
+      color: #0f172a;
+      padding: 2px 4px;
+      border-radius: 4px;
+    }
+    pre code {
+      background-color: transparent;
+      color: inherit;
+      padding: 0;
+    }
+    .speech-box {
+      background: #eff6ff;
+      border-left: 4px solid #2563eb;
+      border-radius: 0 6px 6px 0;
+      padding: 9px 13px;
+      margin: 8px 0;
+      font-size: 12.5px;
+      font-style: italic;
+      color: #1e3a8a;
+      page-break-inside: avoid;
+    }
+    .action-badge {
+      font-weight: 700;
+      font-style: normal;
+      color: #1d4ed8;
+      display: block;
+      margin-bottom: 3px;
+      text-transform: uppercase;
+      font-size: 11px;
+      letter-spacing: 0.5px;
+    }
+    .highlight-card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 10px 14px;
+      margin-bottom: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+      page-break-inside: avoid;
+    }
+    .highlight-card.star {
+      border: 2px solid #3b82f6;
+      background: #f8fafc;
+    }
+    .card-title {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 6px;
+    }
+    .page-break {
+      page-break-before: always;
+    }
+    @media print {
+      body {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <span class="badge">UADER - FCyT | Ingeniería de Software II</span>
+  <h1>Guion Paso a Paso para la Defensa Oral: TPFI</h1>
+  <p><strong>Proyecto:</strong> TPFI-PROJECT | <strong>Autores:</strong> Camila Viñeg, Tadeo Rochas, Abril Poggio | <strong>Versión:</strong> 0.5.0</p>
+
+  <h2>0. Disposición de la Pantalla (3 Terminales de PowerShell)</h2>
+  <p>Antes de que te llamen, acomoda tus ventanas en la pantalla de la siguiente manera y verifica tener activo el entorno <code>(.venv)</code>:</p>
+
+  <div class="diagram">+-----------------------------------+-----------------------------------+
+|            TERMINAL 1             |            TERMINAL 2             |
+|     (Servidor TCP Multihilo)      |       (ObserverClient Push)       |
++-----------------------------------+-----------------------------------+
+|                            TERMINAL 3                                 |
+|             (SingletonClient - Peticiones Transaccionales)            |
++-----------------------------------------------------------------------+</div>
+
+  <h2>1. Introducción Inicial (30 segundos)</h2>
+  <div class="speech-box">
+    <span class="action-badge">Qué decir al tribunal:</span>
+    "Buenas tardes profesores. Nuestro proyecto es una aplicación distribuida cliente-servidor desarrollada sobre TCP y conectada a AWS DynamoDB.<br>
+    El sistema implementa cuatro patrones de diseño GoF:<br>
+    1. <strong>Singleton:</strong> para gestionar el acceso físico único a las tablas <code>CorporateData</code> y <code>CorporateLog</code>.<br>
+    2. <strong>Proxy:</strong> para interceptar, validar datos mínimos y proteger las claves primarias antes de acceder a la base.<br>
+    3. <strong>Observer:</strong> para notificar en tiempo real a clientes suscriptos cada vez que un registro cambia.<br>
+    4. <strong>Iterator:</strong> para recorrer y paginar transparentemente DynamoDB sin truncamientos ni saturación de memoria.<br>
+    A continuación, realizaremos la demostración funcional en vivo con 3 servicios concurrentes."
+  </div>
+
+  <h2>2. Puesta en Marcha de Servicios (1 minuto)</h2>
+
+  <div class="highlight-card">
+    <div class="card-title">Paso 2.1: Iniciar el Servidor de Aplicaciones (Terminal 1)</div>
+    <pre><code>python -m tpfi.singletonproxyobserver -p 8080 -v</code></pre>
+    <div class="speech-box">
+      <span class="action-badge">Qué decir:</span>
+      "Iniciamos en la Terminal 1 el servidor multihilo en el puerto 8080. Como pueden observar en los logs, los repositorios se inicializan bajo el patrón Singleton: una única instancia para todo el proceso. Cada cliente entrante será atendido en un hilo independiente para garantizar concurrencia."
+    </div>
+  </div>
+
+  <div class="highlight-card">
+    <div class="card-title">Paso 2.2: Conectar el Observador Reactivo (Terminal 2)</div>
+    <pre><code>python -m tpfi.observerclient -s 127.0.0.1 -p 8080 -v</code></pre>
+    <div class="speech-box">
+      <span class="action-badge">Qué decir:</span>
+      "En la Terminal 2 conectamos el <code>ObserverClient</code>. El observador envía su UUID de CPU solicitando la suscripción. El servidor confirma con <code>status: ok</code> y deja el socket TCP abierto en estado de escucha activa para recibir notificaciones push."
+    </div>
+  </div>
+
+  <div class="page-break"></div>
+
+  <h2>3. Batería de Pruebas en Vivo (Terminal 3: SingletonClient)</h2>
+  <p>Ejecuta los siguientes casos sucesivamente desde la <strong>Terminal 3</strong>:</p>
+
+  <div class="highlight-card">
+    <div class="card-title">Caso 3.1: Consulta puntual por clave primaria (Acción 'get')</div>
+    <pre><code>python -m tpfi.singletonclient -s 127.0.0.1 -p 8080 -i "samples/input_get.json" -v</code></pre>
+    <div class="speech-box">
+      <span class="action-badge">Qué señalar y decir:</span>
+      <strong>1. Señalar Terminal 3:</strong> "Enviamos la acción <code>get</code> solicitando la sede <code>UADER-FCyT-IS2</code>. El servidor nos devuelve los datos completos con <code>status: ok</code>."<br>
+      <strong>2. Señalar Terminal 1 (Servidor):</strong> "Fíjense en los logs del servidor: antes de resolver la lectura, se registró obligatoriamente la pista de auditoría en la tabla <code>CorporateLog</code> con marca temporal UTC y la telemetría de CPU del cliente."
+    </div>
+  </div>
+
+  <div class="highlight-card star">
+    <div class="card-title">Caso 3.2: Modificación parcial y notificación en cascada (Acción 'set') ★ MOMENTO CLAVE</div>
+    <pre><code>python -m tpfi.singletonclient -s 127.0.0.1 -p 8080 -i "samples/input_set.json" -v</code></pre>
+    <div class="speech-box">
+      <span class="action-badge">Qué señalar y decir:</span>
+      <strong>1. Señalar Terminal 3:</strong> "Enviamos una modificación parcial (<code>set</code>) actualizando únicamente el teléfono y la web. El Proxy realiza una actualización atómica en DynamoDB preservando los campos existentes."<br>
+      <strong>2. Señalar inmediatamente la Terminal 2 (Observador):</strong><br>
+      <strong>"¡Miren la Terminal 2! Sin hacer ninguna recarga ni polling, el observador acaba de recibir la notificación push en cascada en tiempo real con el registro actualizado."</strong>
+    </div>
+  </div>
+
+  <div class="highlight-card">
+    <div class="card-title">Caso 3.3: Listado completo y paginación transparente (Acción 'list')</div>
+    <pre><code>python -m tpfi.singletonclient -s 127.0.0.1 -p 8080 -i "samples/input_list.json" -v</code></pre>
+    <div class="speech-box">
+      <span class="action-badge">Qué decir:</span>
+      "Pedimos el listado completo. Aquí entra en juego el <strong>patrón Iterator</strong>: DynamoDB limita las lecturas de <code>scan</code> a 1 MB por llamada. Nuestro <code>RecordIterator</code> recorre página por página siguiendo <code>LastEvaluatedKey</code> de forma perezosa (<em>lazy evaluation</em>), trayendo toda la tabla sin truncamientos y sin saturar la memoria RAM del servidor."
+    </div>
+  </div>
+
+  <div class="highlight-card">
+    <div class="card-title">Caso 3.4: Validación y protección del Proxy ('set' inválido)</div>
+    <pre><code>python -m tpfi.singletonclient -s 127.0.0.1 -p 8080 -i "samples/input_invalido.json" -v</code></pre>
+    <div class="speech-box">
+      <span class="action-badge">Qué decir:</span>
+      "Enviamos una petición donde el cliente intenta modificar el campo reservado <code>id</code> (clave primaria). Como ven, <strong>el Proxy interceptó el requerimiento y lo rechazó con <code>status: error</code></strong>. La petición ni siquiera llegó a la base física, protegiendo la integridad de la base de datos."
+    </div>
+  </div>
+
+  <div class="page-break"></div>
+
+  <h2>4. Cierre y Verificación Automatizada (1 minuto)</h2>
+
+  <div class="highlight-card">
+    <div class="card-title">Paso 4.1: Suite de Pruebas Automatizadas</div>
+    <pre><code>pytest</code></pre>
+    <div class="speech-box">
+      <span class="action-badge">Qué decir:</span>
+      "El proyecto cuenta con <strong>195 pruebas automatizadas</strong> que cubren pruebas unitarias con dobles de prueba, la suite formal de <strong>pruebas de aceptación</strong> (<code>test_acceptance.py</code>) con los 5 escenarios obligatorios de la consigna, y pruebas de propiedades con <strong>Hypothesis</strong> (<code>test_hypothesis.py</code>) sometiendo al protocolo a fuzzing. Alcanzamos un <strong>95.03% de cobertura total</strong>."
+    </div>
+  </div>
+
+  <div class="highlight-card">
+    <div class="card-title">Paso 4.2: Chequeo de Linters y Estilo</div>
+    <pre><code>ruff check . ; black --check .</code></pre>
+    <div class="speech-box">
+      <span class="action-badge">Qué decir:</span>
+      "El código aprueba al 100% el análisis estático de linters (Ruff), formato estándar PEP 8 (Black), tipado estricto (Mypy) y seguridad (Bandit)."
+    </div>
+  </div>
+
+  <h2>5. Respuestas Rápidas para Preguntas del Tribunal</h2>
+  <ul>
+    <li><strong>¿Por qué <code>session_id</code> lo crea el servidor y no el cliente?</strong><br>
+    <em>Respuesta:</em> "Por seguridad y no repudio. Si el cliente lo eligiera, podría sobrescribir auditorías anteriores o falsear identidades en <code>CorporateLog</code>."</li>
+    <li><strong>¿Qué pasa si se cae el observador?</strong><br>
+    <em>Respuesta:</em> "El servidor detecta el socket roto, hace una poda automática (<code>unsubscribe</code>) para no dejar descriptores zombis, y el cliente tiene un bucle que reintenta reconectarse cada 30 segundos."</li>
+    <li><strong>¿Por qué usan delimitador <code>\n</code> en los sockets?</strong><br>
+    <em>Respuesta:</em> "Porque TCP es un flujo continuo de bytes (stream). Sin encuadre por delimitador, los mensajes podrían mezclarse o fragmentarse. <code>JsonSocket</code> bufferiza y entrega mensajes JSON completos."</li>
+    <li><strong>¿Qué pasa si falla Internet en el aula?</strong><br>
+    <em>Respuesta:</em> "Tenemos preparado el script <code>python demo_runner.py</code> que emula el ciclo completo contra repositorios en memoria de forma 100% offline."</li>
+  </ul>
+
+</body>
+</html>
+
