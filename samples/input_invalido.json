@@ -1,8 +1,8 @@
 {
-  "action": "set",
-  "id": "UADER-FCyT-IS2",
+  "UUID": "1234567890",
+  "ID": "TPFI-DEMO-2026",
+  "ACTION": "set",
   "data": {
     "id": "INTENTO-MODIFICAR-CLAVE-RESERVADA"
   }
 }
-

@@ -62,6 +62,35 @@ class _StopRunError(RuntimeError):
     """Senal de prueba para detener el bucle infinito de ``run``."""
 
 
+class TimeoutOnceChannel(FakeChannel):
+    """Canal que vence algunas lecturas antes de entregar los mensajes."""
+
+    def __init__(self, messages: list[dict[str, Any]], timeouts: int = 1) -> None:
+        """Crea el canal con la cantidad de timeouts previos a los mensajes.
+
+        Args:
+            messages: Mensajes a entregar en orden.
+            timeouts: Cantidad de lecturas que deben vencer antes de entregar
+                el proximo mensaje.
+        """
+        super().__init__(messages)
+        self.pending_timeouts = timeouts
+
+    def receive(self) -> dict[str, Any]:
+        """Simula un vencimiento de lectura o entrega el proximo mensaje.
+
+        Returns:
+            El proximo mensaje disponible.
+
+        Raises:
+            TimeoutError: Mientras queden vencimientos pendientes.
+        """
+        if self.pending_timeouts > 0:
+            self.pending_timeouts -= 1
+            raise TimeoutError("sin datos")
+        return super().receive()
+
+
 def test_build_subscription_includes_client_uuid() -> None:
     """La subscripcion transporta el UUID de CPU del observador."""
     request = observerclient.build_subscription("cpu-1")
@@ -153,8 +182,12 @@ def test_connect_returns_json_socket(monkeypatch: pytest.MonkeyPatch) -> None:
         sock.close()
 
 
-def test_connect_leaves_the_socket_blocking(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Tras conectar, la escucha queda bloqueante y no expira por inactividad."""
+def test_connect_sets_a_polling_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Tras conectar, la escucha usa un timeout corto para atender Ctrl+C.
+
+    El timeout no marca una desconexion: solo limita cuanto tiempo puede pasar
+    el hilo principal bloqueado en ``recv`` antes de procesar la senal.
+    """
     sock = socket.socket()
     sock.settimeout(observerclient.CONNECTION_TIMEOUT)
     try:
@@ -162,9 +195,33 @@ def test_connect_leaves_the_socket_blocking(monkeypatch: pytest.MonkeyPatch) -> 
 
         observerclient.connect("localhost", 8080)
 
-        assert sock.gettimeout() is None
+        assert sock.gettimeout() == observerclient.RECEIVE_TIMEOUT
     finally:
         sock.close()
+
+
+def test_listen_once_survives_receive_timeouts(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Los vencimientos de lectura no cortan la escucha ni pierden mensajes."""
+    channel = TimeoutOnceChannel(
+        [
+            make_response("ack-1", {"subscribed": True}),
+            make_notification("s-1", {"id": "a"}),
+            make_notification("s-2", {"id": "b"}),
+        ],
+        timeouts=2,
+    )
+    monkeypatch.setattr(observerclient, "connect", lambda *a, **k: channel)
+
+    with pytest.raises(ConnectionError):
+        observerclient.listen_once("localhost", 8080, "cpu-1", None)
+
+    printed = capsys.readouterr().out
+    assert '"id": "a"' in printed
+    assert '"id": "b"' in printed
 
 
 def test_run_reconnects_after_failure(monkeypatch: pytest.MonkeyPatch) -> None:

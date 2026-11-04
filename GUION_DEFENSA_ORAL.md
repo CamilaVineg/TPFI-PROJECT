@@ -85,7 +85,7 @@ python -m tpfi.singletonclient -s 127.0.0.1 -p 8080 -i "samples/input_get.json" 
 
 ---
 
-### Caso 2: Modificación Parcial y Notificación en Cascada (`set`)
+### Caso 2: Alta del registro demo y Notificación en Cascada (`set`)
 *(¡Este es el momento estrella de la demostración!)*
 
 Ejecuta en la **Terminal 3**:
@@ -94,7 +94,7 @@ python -m tpfi.singletonclient -s 127.0.0.1 -p 8080 -i "samples/input_set.json" 
 ```
 
 > **Qué señalar y decir:**  
-> 1. Señala la **Terminal 3**: *"Enviamos una modificación parcial (`set`) actualizando únicamente el teléfono y la web. El Proxy fusiona estos campos preservando los anteriores mediante una actualización atómica en DynamoDB."*  
+> 1. Señala la **Terminal 3**: *"Enviamos un `set` con el registro descartable `TPFI-DEMO-2026` y todos los campos del tuple. El Proxy valida los datos y el repositorio crea el registro, o lo actualiza si ya existe, mediante una operación atómica en DynamoDB."*  
 > 2. Señala inmediatamente la **Terminal 2 (Observador)**:  
 >    **"¡Miren la Terminal 2! Sin hacer ninguna recarga ni polling, el `ObserverClient` acaba de recibir la notificación push en cascada en tiempo real con el registro actualizado."**
 

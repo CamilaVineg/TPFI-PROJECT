@@ -242,7 +242,7 @@ python -m tpfi.observerclient -s 127.0.0.1 -p 8080 -v
 # 1. Consulta por clave (Lectura intermediada por Proxy)
 python -m tpfi.singletonclient -s 127.0.0.1 -p 8080 -i "samples/input_get.json" -v
 
-# 2. Modificación parcial (Atención: la Terminal 2 recibe la notificación en tiempo real)
+# 2. Alta del registro demo TPFI-DEMO-2026 (Atención: la Terminal 2 recibe la notificación en tiempo real)
 python -m tpfi.singletonclient -s 127.0.0.1 -p 8080 -i "samples/input_set.json" -v
 
 # 3. Listado completo (Paginación transparente con el patrón Iterator)

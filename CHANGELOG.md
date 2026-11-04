@@ -15,10 +15,8 @@ y los autores que participaron en el trabajo durante ese periodo.
 
 - `GUIA_PRUEBAS_TERMINAL.md`: guia paso a paso para probar los tres programas desde tres terminales, con los cinco casos de Validacion y Verificacion de la consigna, resultados esperados y mapeo a las tablas.
 - `ver_auditoria.py`: verificador de las ultimas entradas de `CorporateLog` con accion, clave, sesion, UUID de cliente y timestamp.
-- `samples/input_get_demo.json`, `samples/input_set_demo.json` y `samples/input_list_demo.json`: ejemplos con el formato oficial de la consigna (`UUID`, `ID`, `ACTION` y campos del tuple en la raiz) sobre un registro de prueba seguro.
-- `samples/input_get_sin_id.json`, `samples/input_set_sin_datos.json` y `samples/input_set_sin_campos.json`: casos de requerimiento sin datos minimos para la prueba manual de validacion.
+- `samples/`: juego consolidado de siete archivos JSON con el formato oficial de la consigna (`UUID`, `ID`, `ACTION` y campos del tuple en la raiz). `input_get.json` consulta el registro existente `UADER-FCyT-IS2`; `input_set.json` crea o actualiza el registro descartable `TPFI-DEMO-2026`; `input_list.json` recorre toda la tabla; `input_invalido.json` intenta modificar la clave reservada; y los tres restantes cubren requerimientos sin datos minimos (`input_get_sin_id.json`, `input_set_sin_datos.json`, `input_set_sin_campos.json`).
 - `COMANDOS_DEFENSA.txt`: protocolo formal de ejecucion y plan de pruebas de integracion para la defensa oral del sistema distribuido en 3 terminales concurrentes.
-- `samples/`: juego completo de archivos de prueba JSON (`input_get.json`, `input_set.json`, `input_list.json`, `input_invalido.json`) para ensayar las cuatro acciones del protocolo y la validacion de integridad del Proxy.
 - `demo_runner.py`: script interactivo y demostracion en vivo con repositorios en memoria (funciona tanto con AWS DynamoDB como en modo mock offline).
 - `generate_pdf.py`, `docs/GUIA_ESTUDIO_TPFI.html`, `docs/GUIA_ESTUDIO_TPFI.md` y `docs/GUIA_ESTUDIO_TPFI.pdf`: guia completa de arquitectura, patrones GoF, protocolo de red y banco de preguntas de examen oral.
 - `tests/test_acceptance.py`: suite completa de pruebas de aceptacion automatizadas segun la seccion de Validacion y Verificacion de la consigna (camino feliz con impacto en `CorporateData` y `CorporateLog`, argumentos malformados de CLI y archivo, requerimiento sin datos minimos, clientes ante servidor caido y rechazo de doble bind).
@@ -30,17 +28,22 @@ y los autores que participaron en el trabajo durante ese periodo.
 - Soporte para multiples conexiones simultaneas de observadores desde un mismo UUID de CPU mediante `SocketObserver` por socket.
 - Manejo limpio de cancelacion manual (`KeyboardInterrupt`) en `observerclient.py` y salida con codigo `1` en `singletonclient.py` cuando el servidor responde `status=error`.
 
+### Cambiado
+
+- `samples/`: se eliminaron `input_get_demo.json`, `input_set_demo.json` e `input_list_demo.json`; su contenido se fusiono en `input_get.json`, `input_set.json` e `input_list.json`, que ahora usan el formato oficial y el registro descartable `TPFI-DEMO-2026` donde corresponde. Tambien se retiro la variante `input_get_con_uuid.json`: el UUID se prueba con `input_get.json` y la comparacion quedo explicada en la guia.
+
 ### Corregido
 
 - `demo_runner.py`: correccion de docstrings PEP 257 e importaciones no utilizadas (`F401`, `D101-D107`).
 - `tests/test_singletonproxyobserver.py`: alias de tipo `ServerFixture` para compatibilidad simultanea con `ruff format` y `black`.
-- `observerclient.py`: socket bloqueante (`settimeout(None)`) tras conectar para evitar desconexiones espurias cada 10 segundos, emision simultanea por stdout y archivo, y aislamiento de reintentos exclusivamente para fallas de socket (`OSError`).
+- `observerclient.py`: emision simultanea por stdout y archivo, y aislamiento de reintentos exclusivamente para fallas de socket (`OSError`).
 - `proxy.py`: validacion estricta contra atributos ajenos a `CORPORATE_FIELDS` y liberacion explicita del iterador en `list()`.
 - `singletonproxyobserver.py`: desactivacion de `allow_reuse_address` en Windows para impedir que dos instancias escuchen en el mismo puerto, y aborto con error si falla el registro de auditoria.
 - Plantilla `cookiecutter-tpfi`: sincronizacion de todos los modulos faltantes (`collection.py`, `protocol.py`, `proxy.py`, `repository.py`), tests de aceptacion e hipotesis, parametrizados con `{{ cookiecutter.package_name }}`.
 - `repository.py`: `merge()` enviaba siempre el marcador `:null` en `ExpressionAttributeValues`; cuando el cliente informaba todos los campos del tuple, DynamoDB rechazaba la operacion con `ValidationException ... unused ... keys: {:null}`. Ahora el marcador solo se agrega si hay campos omitidos, con prueba de regresion en `tests/test_repository.py` y su equivalente en la plantilla.
 - `config.py`: la region por defecto pasa de `us-west-2` a `us-east-1`, para coincidir con la plantilla Cookiecutter y con las tablas reales de `CorporateData` y `CorporateLog`.
 - Documentacion de comandos: se reemplazo la forma `-o=archivo.json` por `-o archivo.json` en la guia, el README y la plantilla. Windows PowerShell 5.1 corta ese argumento en el punto y el programa recibe `.json` como argumento suelto (`unrecognized arguments: .json`).
+- `observerclient.py`: `Ctrl+C` quedaba pendiente mientras el hilo principal estaba bloqueado en `recv` y el observer solo terminaba cuando el servidor enviaba algo o cerraba la conexion. Ahora el socket usa sondeos de `RECEIVE_TIMEOUT` (1 segundo) y `_receive` reintenta los vencimientos sin perder mensajes, de modo que la interrupcion se atiende aunque el servidor siga activo. Se actualizaron la prueba de conexion y la plantilla.
 
 ### Autores
 

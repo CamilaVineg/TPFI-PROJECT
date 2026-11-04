@@ -124,20 +124,20 @@ Comportamiento:
   5. Retorna la entidad en formato JSON con status 'ok'.
 
 
---- Caso 3.3.2: Actualizacion parcial y notificacion en cascada (Accion 'set') ---
+--- Caso 3.3.2: Alta del registro demo y notificacion en cascada (Accion 'set') ---
 Comando:
   singletonclient -i "samples/input_set.json" -v
 
 Comportamiento:
-  1. Envia nuevos valores para los atributos 'telefono' y 'web'.
-  2. DataProxy intercepta el requerimiento y realiza la actualizacion parcial:
-     conserva los atributos previos existentes en base ('sede', 'provincia', etc.)
-     y fusiona los campos informados.
-  3. DataRepository persiste la entidad actualizada en CorporateData.
+  1. Envia el registro descartable 'TPFI-DEMO-2026' con todos los campos del
+     tuple CorporateData definidos en la consigna.
+  2. DataProxy intercepta el requerimiento y valida los campos informados.
+  3. DataRepository crea el registro si no existe, o fusiona los valores
+     informados si ya existe, mediante una actualizacion atomica en DynamoDB.
   4. Al concluir la transaccion con exito, el servidor emite una notificacion en
      cascada mediante ObservedSubject.notify().
   5. Resultado observable: Terminal 2 (ObserverClient) recibe en tiempo real
-     la trama JSON con los datos actualizados del registro.
+     la trama JSON con los datos del registro creado o actualizado.
 
 
 --- Caso 3.3.3: Listado completo y paginacion de DynamoDB (Accion 'list') ---

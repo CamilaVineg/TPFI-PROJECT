@@ -41,6 +41,13 @@ logger = logging.getLogger(__name__)
 
 CONNECTION_TIMEOUT = 10.0
 
+# Tiempo maximo de espera por cada lectura del socket. No es un timeout de
+# desconexion: al vencer, ``_receive`` vuelve a intentar y el proceso puede
+# atender Ctrl+C. Sin este sondeo, en Windows la senal queda pendiente mientras
+# el hilo principal esta bloqueado en ``recv`` y el observer solo termina
+# cuando el servidor le envia algo o cierra la conexion.
+RECEIVE_TIMEOUT = 1.0
+
 
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     """Interpreta los argumentos de linea de comandos del observador.
@@ -107,11 +114,12 @@ def build_subscription(client_uuid: str, session_id: str | None = None) -> dict[
 def connect(host: str, port: int) -> JsonSocket:
     """Abre una conexion TCP con el servidor.
 
-    El timeout de ``CONNECTION_TIMEOUT`` se aplica solo al establecimiento de
-    la conexion. Una vez conectado, el socket queda en modo bloqueante porque
-    la escucha es de larga duracion: si se conservara el timeout, cada
-    intervalo de inactividad se interpretaria como una caida y el observador
-    perderia las notificaciones que lleguen durante el reintento.
+    El timeout de ``CONNECTION_TIMEOUT`` se aplica al establecimiento de la
+    conexion. Una vez conectado se usa ``RECEIVE_TIMEOUT`` como intervalo de
+    sondeo: si no hay datos, la lectura vence y ``_receive`` la reintenta, de
+    modo que el proceso puede atender ``Ctrl+C``. El socket no se considera
+    caido por inactividad y no se pierde ningun mensaje, porque
+    :class:`JsonSocket` conserva el buffer parcial entre llamadas.
 
     Args:
         host: Host del servidor.
@@ -124,8 +132,28 @@ def connect(host: str, port: int) -> JsonSocket:
         OSError: Si no se puede establecer la conexion.
     """
     sock = socket.create_connection((host, port), timeout=CONNECTION_TIMEOUT)
-    sock.settimeout(None)
+    sock.settimeout(RECEIVE_TIMEOUT)
     return JsonSocket(sock)
+
+
+def _receive(channel: JsonSocket) -> dict[str, Any]:
+    """Espera el proximo mensaje sin dejar de atender la interrupcion manual.
+
+    Un vencimiento de ``RECEIVE_TIMEOUT`` solo significa que el servidor no
+    envio datos en ese intervalo. Se reintenta la lectura conservando el buffer
+    interno del canal, hasta que llegue un mensaje.
+
+    Args:
+        channel: Canal JSON conectado al servidor.
+
+    Returns:
+        El mensaje recibido.
+    """
+    while True:
+        try:
+            return channel.receive()
+        except TimeoutError:
+            continue
 
 
 def emit(message: dict[str, Any], output_path: str | None) -> None:
@@ -160,6 +188,10 @@ def listen_once(
     cambios de ``CorporateData``. Devuelve (o propaga la excepcion) cuando el
     socket se cierra.
 
+    La espera se hace con sondeos de ``RECEIVE_TIMEOUT`` para que ``Ctrl+C``
+    interrumpa el proceso aunque el servidor no envie nada. Un vencimiento de
+    ese timeout no cierra la conexion ni descarta mensajes.
+
     Args:
         host: Host del servidor.
         port: Puerto del servidor.
@@ -175,13 +207,13 @@ def listen_once(
     logger.info("Conectado a %s:%s como %s", host, port, client_uuid)
     try:
         channel.send(build_subscription(client_uuid))
-        ack = channel.receive()
+        ack = _receive(channel)
         if ack.get("status") == STATUS_ERROR:
             raise InvalidMessageError(
                 f"El servidor rechazo la subscripcion: {ack.get('error', 'sin detalle')}"
             )
         while True:
-            message = channel.receive()
+            message = _receive(channel)
             if message.get("type") != TYPE_NOTIFICATION:
                 logger.debug("Mensaje ignorado por no ser notificacion: %s", message.get("type"))
                 continue

@@ -209,11 +209,11 @@
   </div>
 
   <div class="highlight-card star">
-    <div class="card-title">Caso 3.2: Modificación parcial y notificación en cascada (Acción 'set') ★ MOMENTO CLAVE</div>
+    <div class="card-title">Caso 3.2: Alta del registro demo y notificación en cascada (Acción 'set') ★ MOMENTO CLAVE</div>
     <pre><code>python -m tpfi.singletonclient -s 127.0.0.1 -p 8080 -i "samples/input_set.json" -v</code></pre>
     <div class="speech-box">
       <span class="action-badge">Qué señalar y decir:</span>
-      <strong>1. Señalar Terminal 3:</strong> "Enviamos una modificación parcial (<code>set</code>) actualizando únicamente el teléfono y la web. El Proxy realiza una actualización atómica en DynamoDB preservando los campos existentes."<br>
+      <strong>1. Señalar Terminal 3:</strong> "Enviamos un <code>set</code> con el registro descartable <code>TPFI-DEMO-2026</code> y todos los campos del tuple. El Proxy valida los datos y el repositorio crea el registro, o lo actualiza si ya existe, mediante una operación atómica en DynamoDB."<br>
       <strong>2. Señalar inmediatamente la Terminal 2 (Observador):</strong><br>
       <strong>"¡Miren la Terminal 2! Sin hacer ninguna recarga ni polling, el observador acaba de recibir la notificación push en cascada en tiempo real con el registro actualizado."</strong>
     </div>
