@@ -17,9 +17,9 @@ Los modulos usan el mismo nombre que los programas del enunciado. Cada uno se
 ejecuta mediante el comando homonimo instalado en el entorno virtual:
 
 ```bash
-singletonproxyobserver -p=8080 -v
-singletonclient -i=input.json -o=output.json -v
-observerclient -s=localhost -p=8080 -v
+singletonproxyobserver -p 8080 -v
+singletonclient -i input.json -o output.json -v
+observerclient -s localhost -p 8080 -v
 ```
 
 ## Patrones
@@ -33,7 +33,7 @@ observerclient -s=localhost -p=8080 -v
 ## Requisitos
 
 - Python 3.10 o superior
-- AWS CLI v2 configurado (`aws configure`) en la region `us-west-2`
+- AWS CLI v2 configurado (`aws configure`) en la region `us-east-1`
 - Tablas `CorporateData` y `CorporateLog` ya creadas
 
 ## Instalacion
@@ -50,9 +50,9 @@ pip install -e ".[dev]"
 ## Uso
 
 ```bash
-singletonproxyobserver -p=8080 -v
-singletonclient -i=input.json -o=output.json -v
-observerclient -s=localhost -p=8080 -v
+singletonproxyobserver -p 8080 -v
+singletonclient -i input.json -o output.json -v
+observerclient -s localhost -p 8080 -v
 ```
 
 ## Calidad
@@ -67,6 +67,15 @@ bandit -r src
 ```
 
 ## Documentacion
+
+Guia de prueba manual de los tres programas, con los casos de Validacion y
+Verificacion de la consigna:
+
+```bash
+ver GUIA_PRUEBAS_TERMINAL.md
+```
+
+Documentacion de los modulos:
 
 ```bash
 pdoc -o docs src/tpfi

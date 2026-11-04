@@ -248,6 +248,7 @@ class DataRepository(metaclass=SingletonABCMeta):
         names: dict[str, str] = {}
         expressions: list[str] = []
         attribute_values: dict[str, Any] = {}
+        uses_null_placeholder = False
         for index, field in enumerate(fields):
             name_placeholder = f"#{index}"
             names[name_placeholder] = field
@@ -257,7 +258,12 @@ class DataRepository(metaclass=SingletonABCMeta):
                 attribute_values[value_placeholder] = values[field]
             else:
                 expressions.append(f"{name_placeholder} = if_not_exists({name_placeholder}, :null)")
-        attribute_values[":null"] = None
+                uses_null_placeholder = True
+        # DynamoDB rechaza los valores de expresion que no se usan. Si el
+        # cliente informo todos los campos no hay ninguno "en blanco" y el
+        # marcador :null no debe enviarse.
+        if uses_null_placeholder:
+            attribute_values[":null"] = None
 
         try:
             response = self.table.update_item(

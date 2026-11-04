@@ -67,7 +67,10 @@ def convert_html_to_pdf(browser: str | None, html_path: Path, pdf_path: Path) ->
         try:
             subprocess.run(cmd, check=True, capture_output=True)
             if pdf_path.is_file() and pdf_path.stat().st_size > 0:
-                print(f"[EXITO] PDF generado: {pdf_path.name} ({pdf_path.stat().st_size / 1024:.1f} KB)")
+                print(
+                    f"[EXITO] PDF generado: {pdf_path.name} "
+                    f"({pdf_path.stat().st_size / 1024:.1f} KB)"
+                )
                 return True
         except Exception as err:
             print(f"[AVISO] Fallo la conversion headless de {html_path.name}: {err}")

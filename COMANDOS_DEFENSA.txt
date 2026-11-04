@@ -69,7 +69,7 @@ Objetivo:
   Poner en linea el demonio TCP multihilo para recepcion y despacho de peticiones.
 
 Comando:
-  singletonproxyobserver -p=8080 -v
+  singletonproxyobserver -p 8080 -v
 
 Parametros:
   -p=8080 : Puerto TCP de enlace (ApplicationServer / ThreadingTCPServer).
@@ -91,7 +91,7 @@ Objetivo:
   Registrar un suscriptor persistente para recibir cambios de datos en tiempo real.
 
 Comando:
-  observerclient -s=localhost -p=8080 -v
+  observerclient -s localhost -p 8080 -v
 
 Parametros:
   -s=localhost : Direccion del host donde corre el servidor de aplicaciones.
@@ -189,4 +189,36 @@ Compilacion de documentacion de modulos y clases (pdoc):
 
 Generacion de la Guia de Arquitectura y Especificacion (PDF):
   python generate_pdf.py
+
+
+6. CASOS DE VALIDACION Y VERIFICACION (COMPLEMENTO)
+--------------------------------------------------------------------------------
+La guia completa, con resultados esperados y mapeo a la consigna oficial, esta
+en GUIA_PRUEBAS_TERMINAL.md. Los casos que faltaban en este archivo son:
+
+6.1 Argumentos malformados en cada programa (deben salir con exit=2):
+  singletonproxyobserver -p NO_ES_PUERTO
+  singletonclient
+  observerclient --retry-interval 0
+
+6.2 Requerimiento sin datos minimos:
+  singletonclient -i samples/input_get_sin_id.json -v
+  singletonclient -i samples/input_set_sin_datos.json -v
+  singletonclient -i samples/input_set_sin_campos.json -v
+
+6.3 Cliente con el servidor caido:
+  Detener el servidor con Ctrl+C y ejecutar:
+  singletonclient -i samples/input_get.json -v
+  Resultado esperado: error de conexion y exit=1.
+
+6.4 Intento de levantar dos veces el servidor:
+  Con el servidor en ejecucion, abrir otra terminal y ejecutar:
+  singletonproxyobserver -p 8080 -v
+  Resultado esperado en Windows: WinError 10048 y exit=1.
+
+6.5 Verificacion de la auditoria en CorporateLog:
+  python ver_auditoria.py --limit 10
+
+6.6 Pruebas automatizadas de aceptacion:
+  pytest -m acceptance -v --no-cov
 ================================================================================

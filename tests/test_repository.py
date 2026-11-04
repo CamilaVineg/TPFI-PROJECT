@@ -271,6 +271,23 @@ def test_merge_is_a_single_atomic_operation(data_repo: DataRepository) -> None:
     assert table.update_calls[0]["ReturnValues"] == "ALL_NEW"
 
 
+def test_merge_omits_the_null_placeholder_when_every_field_is_informed(
+    data_repo: DataRepository,
+) -> None:
+    """Si se informan todos los campos, no se envia el marcador ``:null``.
+
+    DynamoDB rechaza los valores de expresion que no se usan. El ``:null``
+    solo tiene sentido cuando hay campos omitidos que deben quedar en blanco.
+    """
+    values = {field: f"v-{field}" for field in CORPORATE_FIELDS if field != "id"}
+
+    data_repo.merge("D", values)
+
+    table = data_repo._table
+    assert isinstance(table, FakeTable)
+    assert ":null" not in table.update_calls[0]["ExpressionAttributeValues"]
+
+
 def test_merge_rejects_fields_outside_the_tuple(data_repo: DataRepository) -> None:
     """Un campo ajeno al tuple se rechaza antes de llamar a DynamoDB."""
     with pytest.raises(ValueError, match="ajenos a CorporateData"):

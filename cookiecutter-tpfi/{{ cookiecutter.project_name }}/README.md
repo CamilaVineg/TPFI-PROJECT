@@ -42,7 +42,7 @@ pip install -e ".[dev]"
 
 ```bash
 {{ cookiecutter.app_name }} -p={{ cookiecutter.default_port }} -v
-{{ cookiecutter.client_name }} -i=input.json -o=output.json -v
+{{ cookiecutter.client_name }} -i input.json -o output.json -v
 {{ cookiecutter.observer_name }} -s=localhost -p={{ cookiecutter.default_port }} -v
 ```
 

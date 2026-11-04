@@ -13,6 +13,10 @@ y los autores que participaron en el trabajo durante ese periodo.
 
 ### Agregado
 
+- `GUIA_PRUEBAS_TERMINAL.md`: guia paso a paso para probar los tres programas desde tres terminales, con los cinco casos de Validacion y Verificacion de la consigna, resultados esperados y mapeo a las tablas.
+- `ver_auditoria.py`: verificador de las ultimas entradas de `CorporateLog` con accion, clave, sesion, UUID de cliente y timestamp.
+- `samples/input_get_demo.json`, `samples/input_set_demo.json` y `samples/input_list_demo.json`: ejemplos con el formato oficial de la consigna (`UUID`, `ID`, `ACTION` y campos del tuple en la raiz) sobre un registro de prueba seguro.
+- `samples/input_get_sin_id.json`, `samples/input_set_sin_datos.json` y `samples/input_set_sin_campos.json`: casos de requerimiento sin datos minimos para la prueba manual de validacion.
 - `COMANDOS_DEFENSA.txt`: protocolo formal de ejecucion y plan de pruebas de integracion para la defensa oral del sistema distribuido en 3 terminales concurrentes.
 - `samples/`: juego completo de archivos de prueba JSON (`input_get.json`, `input_set.json`, `input_list.json`, `input_invalido.json`) para ensayar las cuatro acciones del protocolo y la validacion de integridad del Proxy.
 - `demo_runner.py`: script interactivo y demostracion en vivo con repositorios en memoria (funciona tanto con AWS DynamoDB como en modo mock offline).
@@ -34,6 +38,9 @@ y los autores que participaron en el trabajo durante ese periodo.
 - `proxy.py`: validacion estricta contra atributos ajenos a `CORPORATE_FIELDS` y liberacion explicita del iterador en `list()`.
 - `singletonproxyobserver.py`: desactivacion de `allow_reuse_address` en Windows para impedir que dos instancias escuchen en el mismo puerto, y aborto con error si falla el registro de auditoria.
 - Plantilla `cookiecutter-tpfi`: sincronizacion de todos los modulos faltantes (`collection.py`, `protocol.py`, `proxy.py`, `repository.py`), tests de aceptacion e hipotesis, parametrizados con `{{ cookiecutter.package_name }}`.
+- `repository.py`: `merge()` enviaba siempre el marcador `:null` en `ExpressionAttributeValues`; cuando el cliente informaba todos los campos del tuple, DynamoDB rechazaba la operacion con `ValidationException ... unused ... keys: {:null}`. Ahora el marcador solo se agrega si hay campos omitidos, con prueba de regresion en `tests/test_repository.py` y su equivalente en la plantilla.
+- `config.py`: la region por defecto pasa de `us-west-2` a `us-east-1`, para coincidir con la plantilla Cookiecutter y con las tablas reales de `CorporateData` y `CorporateLog`.
+- Documentacion de comandos: se reemplazo la forma `-o=archivo.json` por `-o archivo.json` en la guia, el README y la plantilla. Windows PowerShell 5.1 corta ese argumento en el punto y el programa recibe `.json` como argumento suelto (`unrecognized arguments: .json`).
 
 ### Autores
 
